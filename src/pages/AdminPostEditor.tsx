@@ -13,12 +13,12 @@ import Layout from "@/components/layout/Layout";
 import { ArrowLeft, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const categories = ["Noticias", "Impacto", "Historias", "Prevención", "Alianzas", "Incidencia"];
+const allCategories = ["Noticias", "Impacto", "Historias", "Prevención", "Alianzas", "Incidencia"];
 
 const AdminPostEditor = () => {
   const { id } = useParams();
   const isEditing = !!id;
-  const { user, userRole, loading: authLoading } = useAuth();
+  const { user, userRole, blogPermissions, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -31,6 +31,12 @@ const AdminPostEditor = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [category, setCategory] = useState("Noticias");
   const [published, setPublished] = useState(false);
+  const [postAuthorId, setPostAuthorId] = useState<string | null>(null);
+
+  // Get available categories based on permissions
+  const availableCategories = blogPermissions.allowed_categories === null 
+    ? allCategories 
+    : allCategories.filter(cat => blogPermissions.allowed_categories?.includes(cat));
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -43,6 +49,21 @@ const AdminPostEditor = () => {
       fetchPost();
     }
   }, [id, user]);
+
+  // Check permissions after loading
+  useEffect(() => {
+    if (!authLoading && user && userRole) {
+      // Check create permission for new posts
+      if (!isEditing && !blogPermissions.can_create) {
+        toast({
+          title: "Sin permisos",
+          description: "No tienes permiso para crear artículos",
+          variant: "destructive",
+        });
+        navigate("/admin");
+      }
+    }
+  }, [authLoading, user, userRole, blogPermissions, isEditing, navigate]);
 
   const fetchPost = async () => {
     const { data, error } = await supabase
@@ -67,6 +88,23 @@ const AdminPostEditor = () => {
       setYoutubeUrl((data as any).youtube_url || "");
       setCategory(data.category);
       setPublished(data.published);
+      setPostAuthorId(data.author_id);
+
+      // Check edit permissions
+      const canEdit = blogPermissions.can_edit_all || 
+        (blogPermissions.can_edit_own && data.author_id === user?.id);
+      
+      const canAccessCategory = blogPermissions.allowed_categories === null || 
+        blogPermissions.allowed_categories.includes(data.category);
+
+      if (!canEdit || !canAccessCategory) {
+        toast({
+          title: "Sin permisos",
+          description: "No tienes permiso para editar este artículo",
+          variant: "destructive",
+        });
+        navigate("/admin");
+      }
     }
   };
 
@@ -98,6 +136,29 @@ const AdminPostEditor = () => {
       return;
     }
 
+    // Validate category permissions
+    const canAccessCategory = blogPermissions.allowed_categories === null || 
+      blogPermissions.allowed_categories.includes(category);
+    
+    if (!canAccessCategory) {
+      toast({
+        title: "Error",
+        description: "No tienes permiso para publicar en esta categoría",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check publish permission
+    if (published && !blogPermissions.can_publish) {
+      toast({
+        title: "Error",
+        description: "No tienes permiso para publicar artículos",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     const postData = {
@@ -108,8 +169,8 @@ const AdminPostEditor = () => {
       image_url: imageUrl || null,
       youtube_url: youtubeUrl || null,
       category,
-      published,
-      published_at: published ? new Date().toISOString() : null,
+      published: blogPermissions.can_publish ? published : false,
+      published_at: published && blogPermissions.can_publish ? new Date().toISOString() : null,
       author_id: user?.id,
     };
 
@@ -223,13 +284,18 @@ const AdminPostEditor = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
+                    {availableCategories.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {blogPermissions.allowed_categories !== null && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Solo puedes publicar en las categorías asignadas
+                  </p>
+                )}
               </div>
 
               <div>
@@ -283,8 +349,11 @@ const AdminPostEditor = () => {
                     id="published"
                     checked={published}
                     onCheckedChange={setPublished}
+                    disabled={!blogPermissions.can_publish}
                   />
-                  <Label htmlFor="published">Publicar artículo</Label>
+                  <Label htmlFor="published" className={!blogPermissions.can_publish ? "text-muted-foreground" : ""}>
+                    {blogPermissions.can_publish ? "Publicar artículo" : "Sin permiso para publicar"}
+                  </Label>
                 </div>
 
                 <Button type="submit" disabled={loading}>

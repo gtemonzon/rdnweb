@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_permissions: {
+        Row: {
+          allowed_categories: string[] | null
+          can_create: boolean
+          can_delete_all: boolean
+          can_delete_own: boolean
+          can_edit_all: boolean
+          can_edit_own: boolean
+          can_publish: boolean
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed_categories?: string[] | null
+          can_create?: boolean
+          can_delete_all?: boolean
+          can_delete_own?: boolean
+          can_edit_all?: boolean
+          can_edit_own?: boolean
+          can_publish?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed_categories?: string[] | null
+          can_create?: boolean
+          can_delete_all?: boolean
+          can_delete_own?: boolean
+          can_edit_all?: boolean
+          can_edit_own?: boolean
+          can_publish?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blog_posts: {
         Row: {
           author_id: string | null
@@ -115,6 +157,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_category: {
+        Args: { _category: string; _user_id: string }
+        Returns: boolean
+      }
+      has_blog_permission: {
+        Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
