@@ -9,7 +9,7 @@ const contactInfo = [
   {
     icon: MapPin,
     title: "Dirección",
-    details: ["Ciudad de Guatemala", "Guatemala, C.A."],
+    details: ["4ta avenida 10-53 zona 9 Ciudad de Guatemala", "Guatemala, C.A."],
   },
   {
     icon: Phone,
@@ -24,7 +24,7 @@ const contactInfo = [
   {
     icon: Clock,
     title: "Horario",
-    details: ["Lunes a Viernes", "8:00 AM - 5:00 PM"],
+    details: ["Lunes a Viernes", "9:00 AM - 4:00 PM"],
   },
 ];
 
@@ -35,12 +35,9 @@ const Contacto = () => {
       <section className="py-20 gradient-hope">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="font-heading text-4xl md:text-5xl font-bold text-foreground mb-6">
-              Contáctanos
-            </h1>
+            <h1 className="font-heading text-4xl md:text-5xl font-bold text-foreground mb-6">Contáctanos</h1>
             <p className="text-lg text-muted-foreground">
-              ¿Tienes preguntas, sugerencias o deseas colaborar con nosotros? 
-              Estamos aquí para escucharte.
+              ¿Tienes preguntas, sugerencias o deseas colaborar con nosotros? Estamos aquí para escucharte.
             </p>
           </div>
         </div>
@@ -52,9 +49,7 @@ const Contacto = () => {
           <div className="grid lg:grid-cols-2 gap-12">
             {/* Contact Form */}
             <div className="bg-muted rounded-2xl p-8">
-              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">
-                Envíanos un mensaje
-              </h2>
+              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">Envíanos un mensaje</h2>
               <form className="space-y-6">
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -76,11 +71,7 @@ const Contacto = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="message">Mensaje</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Escribe tu mensaje aquí..."
-                    rows={5}
-                  />
+                  <Textarea id="message" placeholder="Escribe tu mensaje aquí..." rows={5} />
                 </div>
                 <Button type="submit" size="lg" className="w-full">
                   <Send className="w-4 h-4 mr-2" />
@@ -91,9 +82,7 @@ const Contacto = () => {
 
             {/* Contact Info */}
             <div>
-              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">
-                Información de contacto
-              </h2>
+              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">Información de contacto</h2>
               <div className="space-y-6">
                 {contactInfo.map((item) => (
                   <div key={item.title} className="flex gap-4">
@@ -101,9 +90,7 @@ const Contacto = () => {
                       <item.icon className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground mb-1">
-                        {item.title}
-                      </h3>
+                      <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
                       {item.details.map((detail) => (
                         <p key={detail} className="text-sm text-muted-foreground">
                           {detail}
@@ -131,16 +118,12 @@ const Contacto = () => {
       <section className="py-16 bg-muted">
         <div className="container">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">
-              ¿Preguntas frecuentes?
-            </h2>
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">¿Preguntas frecuentes?</h2>
             <p className="text-muted-foreground mb-6">
-              Consulta nuestra sección de preguntas frecuentes para encontrar 
-              respuestas rápidas a las dudas más comunes.
+              Consulta nuestra sección de preguntas frecuentes para encontrar respuestas rápidas a las dudas más
+              comunes.
             </p>
-            <Button variant="outline">
-              Ver Preguntas Frecuentes
-            </Button>
+            <Button variant="outline">Ver Preguntas Frecuentes</Button>
           </div>
         </div>
       </section>
