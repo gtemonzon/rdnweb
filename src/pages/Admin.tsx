@@ -33,10 +33,11 @@ interface BlogPost {
   category: string;
   published: boolean;
   created_at: string;
+  author_id: string | null;
 }
 
 const Admin = () => {
-  const { user, userRole, loading, signOut } = useAuth();
+  const { user, userRole, blogPermissions, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -57,7 +58,7 @@ const Admin = () => {
   const fetchPosts = async () => {
     const { data, error } = await supabase
       .from("blog_posts")
-      .select("id, title, slug, category, published, created_at")
+      .select("id, title, slug, category, published, created_at, author_id")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -122,6 +123,26 @@ const Admin = () => {
     navigate("/");
   };
 
+  // Check if user can edit a specific post
+  const canEditPost = (post: BlogPost) => {
+    if (blogPermissions.can_edit_all) return true;
+    if (blogPermissions.can_edit_own && post.author_id === user?.id) return true;
+    return false;
+  };
+
+  // Check if user can delete a specific post
+  const canDeletePost = (post: BlogPost) => {
+    if (blogPermissions.can_delete_all) return true;
+    if (blogPermissions.can_delete_own && post.author_id === user?.id) return true;
+    return false;
+  };
+
+  // Check if user can access a category
+  const canAccessCategory = (category: string) => {
+    if (blogPermissions.allowed_categories === null) return true;
+    return blogPermissions.allowed_categories.includes(category);
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -172,12 +193,14 @@ const Admin = () => {
               </p>
             </div>
             <div className="flex gap-4">
-              <Button asChild>
-                <Link to="/admin/nuevo">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuevo Artículo
-                </Link>
-              </Button>
+              {blogPermissions.can_create && (
+                <Button asChild>
+                  <Link to="/admin/nuevo">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nuevo Artículo
+                  </Link>
+                </Button>
+              )}
               {userRole === "admin" && (
                 <Button asChild variant="secondary">
                   <Link to="/admin/usuarios">
@@ -198,12 +221,14 @@ const Admin = () => {
           ) : posts.length === 0 ? (
             <div className="text-center py-12 bg-muted rounded-lg">
               <p className="text-muted-foreground mb-4">No hay artículos aún</p>
-              <Button asChild>
-                <Link to="/admin/nuevo">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Crear primer artículo
-                </Link>
-              </Button>
+              {blogPermissions.can_create && (
+                <Button asChild>
+                  <Link to="/admin/nuevo">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Crear primer artículo
+                  </Link>
+                </Button>
+              )}
             </div>
           ) : (
             <div className="bg-card rounded-lg shadow overflow-hidden">
@@ -236,23 +261,28 @@ const Admin = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => togglePublish(post.id, post.published)}
-                          >
-                            {post.published ? (
-                              <EyeOff className="w-4 h-4" />
-                            ) : (
-                              <Eye className="w-4 h-4" />
-                            )}
-                          </Button>
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link to={`/admin/editar/${post.id}`}>
-                              <Edit className="w-4 h-4" />
-                            </Link>
-                          </Button>
-                          {userRole === "admin" && (
+                          {blogPermissions.can_publish && canAccessCategory(post.category) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => togglePublish(post.id, post.published)}
+                              title={post.published ? "Despublicar" : "Publicar"}
+                            >
+                              {post.published ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
+                          {canEditPost(post) && canAccessCategory(post.category) && (
+                            <Button size="sm" variant="ghost" asChild>
+                              <Link to={`/admin/editar/${post.id}`}>
+                                <Edit className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                          )}
+                          {canDeletePost(post) && canAccessCategory(post.category) && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button size="sm" variant="ghost" className="text-destructive">
