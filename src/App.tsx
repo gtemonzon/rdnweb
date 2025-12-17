@@ -16,6 +16,8 @@ import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import AdminPostEditor from "./pages/AdminPostEditor";
 import AdminUsers from "./pages/AdminUsers";
+import AdminContenido from "./pages/AdminContenido";
+import AdminAliados from "./pages/AdminAliados";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +43,8 @@ const App = () => (
             <Route path="/admin/nuevo" element={<AdminPostEditor />} />
             <Route path="/admin/editar/:id" element={<AdminPostEditor />} />
             <Route path="/admin/usuarios" element={<AdminUsers />} />
+            <Route path="/admin/contenido" element={<AdminContenido />} />
+            <Route path="/admin/aliados" element={<AdminAliados />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

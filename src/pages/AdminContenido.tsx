@@ -1,0 +1,441 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+import { useAuth } from "@/hooks/useAuth";
+import { Navigate } from "react-router-dom";
+import Layout from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { Save, Plus, Trash2, Loader2 } from "lucide-react";
+
+interface StatItem {
+  number: string;
+  label: string;
+}
+
+interface ValueItem {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+interface TimelineItem {
+  year: string;
+  title: string;
+  description: string;
+}
+
+interface ContentSection {
+  id: string;
+  section_key: string;
+  title: string | null;
+  content: unknown;
+}
+
+const AdminContenido = () => {
+  const { user, userRole, hasPermission, loading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
+  
+  const canManageContent = userRole === "admin" || hasPermission("content", "can_edit_all");
+
+  const { data: contentSections, isLoading } = useQuery({
+    queryKey: ["site-content"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("*")
+        .order("section_key");
+      if (error) throw error;
+      return data as ContentSection[];
+    },
+    enabled: canManageContent,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ sectionKey, content }: { sectionKey: string; content: Json }) => {
+      const { error } = await supabase
+        .from("site_content")
+        .update({ content, updated_by: user?.id })
+        .eq("section_key", sectionKey);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["site-content"] });
+      toast.success("Contenido actualizado correctamente");
+    },
+    onError: () => {
+      toast.error("Error al actualizar el contenido");
+    },
+  });
+
+  if (authLoading) {
+    return (
+      <Layout>
+        <div className="container py-20 flex justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!user || !canManageContent) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  const getSection = (key: string) => contentSections?.find(s => s.section_key === key);
+
+  return (
+    <Layout>
+      <div className="container py-12">
+        <div className="mb-8">
+          <h1 className="font-heading text-3xl font-bold text-foreground">
+            Gestión de Contenido
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Administra el contenido estático del sitio web
+          </p>
+        </div>
+
+        <Tabs defaultValue="stats" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="stats">Estadísticas</TabsTrigger>
+            <TabsTrigger value="mission">Misión/Visión</TabsTrigger>
+            <TabsTrigger value="values">Valores</TabsTrigger>
+            <TabsTrigger value="timeline">Historia</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="stats">
+            <StatsEditor 
+              section={getSection("home_stats")} 
+              onSave={(content) => updateMutation.mutate({ sectionKey: "home_stats", content: JSON.parse(JSON.stringify(content)) })}
+              isSaving={updateMutation.isPending}
+            />
+          </TabsContent>
+
+          <TabsContent value="mission">
+            <MissionVisionEditor 
+              missionSection={getSection("mission")}
+              visionSection={getSection("vision")}
+              onSaveMission={(content) => updateMutation.mutate({ sectionKey: "mission", content: JSON.parse(JSON.stringify(content)) })}
+              onSaveVision={(content) => updateMutation.mutate({ sectionKey: "vision", content: JSON.parse(JSON.stringify(content)) })}
+              isSaving={updateMutation.isPending}
+            />
+          </TabsContent>
+
+          <TabsContent value="values">
+            <ValuesEditor 
+              section={getSection("values")} 
+              onSave={(content) => updateMutation.mutate({ sectionKey: "values", content: JSON.parse(JSON.stringify(content)) })}
+              isSaving={updateMutation.isPending}
+            />
+          </TabsContent>
+
+          <TabsContent value="timeline">
+            <TimelineEditor 
+              section={getSection("timeline")} 
+              onSave={(content) => updateMutation.mutate({ sectionKey: "timeline", content: JSON.parse(JSON.stringify(content)) })}
+              isSaving={updateMutation.isPending}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </Layout>
+  );
+};
+
+// Stats Editor Component
+const StatsEditor = ({ 
+  section, 
+  onSave, 
+  isSaving 
+}: { 
+  section?: ContentSection; 
+  onSave: (content: StatItem[]) => void;
+  isSaving: boolean;
+}) => {
+  const [stats, setStats] = useState<StatItem[]>(() => {
+    if (section?.content && Array.isArray(section.content)) {
+      return section.content as StatItem[];
+    }
+    return [{ number: "", label: "" }];
+  });
+
+  const addStat = () => setStats([...stats, { number: "", label: "" }]);
+  const removeStat = (index: number) => setStats(stats.filter((_, i) => i !== index));
+  const updateStat = (index: number, field: keyof StatItem, value: string) => {
+    const newStats = [...stats];
+    newStats[index][field] = value;
+    setStats(newStats);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Estadísticas de la Página Principal</CardTitle>
+        <CardDescription>Números destacados que se muestran en la página de inicio</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {stats.map((stat, index) => (
+          <div key={index} className="flex gap-4 items-start">
+            <Input
+              placeholder="Número (ej: 30+)"
+              value={stat.number}
+              onChange={(e) => updateStat(index, "number", e.target.value)}
+              className="w-32"
+            />
+            <Input
+              placeholder="Etiqueta"
+              value={stat.label}
+              onChange={(e) => updateStat(index, "label", e.target.value)}
+              className="flex-1"
+            />
+            <Button variant="ghost" size="icon" onClick={() => removeStat(index)}>
+              <Trash2 className="w-4 h-4 text-destructive" />
+            </Button>
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={addStat}>
+            <Plus className="w-4 h-4 mr-2" /> Agregar Estadística
+          </Button>
+          <Button onClick={() => onSave(stats)} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Guardar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Mission/Vision Editor Component
+const MissionVisionEditor = ({ 
+  missionSection, 
+  visionSection, 
+  onSaveMission,
+  onSaveVision,
+  isSaving 
+}: { 
+  missionSection?: ContentSection; 
+  visionSection?: ContentSection;
+  onSaveMission: (content: { text: string }) => void;
+  onSaveVision: (content: { text: string }) => void;
+  isSaving: boolean;
+}) => {
+  const getMissionText = () => {
+    if (missionSection?.content && typeof missionSection.content === 'object' && 'text' in (missionSection.content as object)) {
+      return (missionSection.content as { text: string }).text;
+    }
+    return "";
+  };
+
+  const getVisionText = () => {
+    if (visionSection?.content && typeof visionSection.content === 'object' && 'text' in (visionSection.content as object)) {
+      return (visionSection.content as { text: string }).text;
+    }
+    return "";
+  };
+
+  const [mission, setMission] = useState(getMissionText());
+  const [vision, setVision] = useState(getVisionText());
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Misión</CardTitle>
+          <CardDescription>El propósito fundamental de la organización</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea
+            value={mission}
+            onChange={(e) => setMission(e.target.value)}
+            rows={4}
+            placeholder="Escribe la misión de la organización..."
+          />
+          <Button onClick={() => onSaveMission({ text: mission })} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Guardar Misión
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Visión</CardTitle>
+          <CardDescription>El futuro al que aspira la organización</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea
+            value={vision}
+            onChange={(e) => setVision(e.target.value)}
+            rows={4}
+            placeholder="Escribe la visión de la organización..."
+          />
+          <Button onClick={() => onSaveVision({ text: vision })} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Guardar Visión
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Values Editor Component
+const ValuesEditor = ({ 
+  section, 
+  onSave, 
+  isSaving 
+}: { 
+  section?: ContentSection; 
+  onSave: (content: ValueItem[]) => void;
+  isSaving: boolean;
+}) => {
+  const [values, setValues] = useState<ValueItem[]>(() => {
+    if (section?.content && Array.isArray(section.content)) {
+      return section.content as ValueItem[];
+    }
+    return [{ icon: "Heart", title: "", description: "" }];
+  });
+
+  const iconOptions = ["Heart", "Shield", "Users", "Star", "Award", "Target", "Eye", "BookOpen"];
+
+  const addValue = () => setValues([...values, { icon: "Heart", title: "", description: "" }]);
+  const removeValue = (index: number) => setValues(values.filter((_, i) => i !== index));
+  const updateValue = (index: number, field: keyof ValueItem, value: string) => {
+    const newValues = [...values];
+    newValues[index][field] = value;
+    setValues(newValues);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Valores Institucionales</CardTitle>
+        <CardDescription>Los principios que guían la organización</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {values.map((value, index) => (
+          <div key={index} className="border rounded-lg p-4 space-y-3">
+            <div className="flex gap-4">
+              <select
+                value={value.icon}
+                onChange={(e) => updateValue(index, "icon", e.target.value)}
+                className="px-3 py-2 border rounded-md bg-background"
+              >
+                {iconOptions.map(icon => (
+                  <option key={icon} value={icon}>{icon}</option>
+                ))}
+              </select>
+              <Input
+                placeholder="Título"
+                value={value.title}
+                onChange={(e) => updateValue(index, "title", e.target.value)}
+                className="flex-1"
+              />
+              <Button variant="ghost" size="icon" onClick={() => removeValue(index)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+            <Textarea
+              placeholder="Descripción"
+              value={value.description}
+              onChange={(e) => updateValue(index, "description", e.target.value)}
+              rows={2}
+            />
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={addValue}>
+            <Plus className="w-4 h-4 mr-2" /> Agregar Valor
+          </Button>
+          <Button onClick={() => onSave(values)} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Guardar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Timeline Editor Component
+const TimelineEditor = ({ 
+  section, 
+  onSave, 
+  isSaving 
+}: { 
+  section?: ContentSection; 
+  onSave: (content: TimelineItem[]) => void;
+  isSaving: boolean;
+}) => {
+  const [timeline, setTimeline] = useState<TimelineItem[]>(() => {
+    if (section?.content && Array.isArray(section.content)) {
+      return section.content as TimelineItem[];
+    }
+    return [{ year: "", title: "", description: "" }];
+  });
+
+  const addItem = () => setTimeline([...timeline, { year: "", title: "", description: "" }]);
+  const removeItem = (index: number) => setTimeline(timeline.filter((_, i) => i !== index));
+  const updateItem = (index: number, field: keyof TimelineItem, value: string) => {
+    const newTimeline = [...timeline];
+    newTimeline[index][field] = value;
+    setTimeline(newTimeline);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Historia / Línea de Tiempo</CardTitle>
+        <CardDescription>Los hitos más importantes de la organización</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {timeline.map((item, index) => (
+          <div key={index} className="border rounded-lg p-4 space-y-3">
+            <div className="flex gap-4">
+              <Input
+                placeholder="Año"
+                value={item.year}
+                onChange={(e) => updateItem(index, "year", e.target.value)}
+                className="w-24"
+              />
+              <Input
+                placeholder="Título"
+                value={item.title}
+                onChange={(e) => updateItem(index, "title", e.target.value)}
+                className="flex-1"
+              />
+              <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+            <Textarea
+              placeholder="Descripción"
+              value={item.description}
+              onChange={(e) => updateItem(index, "description", e.target.value)}
+              rows={2}
+            />
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={addItem}>
+            <Plus className="w-4 h-4 mr-2" /> Agregar Evento
+          </Button>
+          <Button onClick={() => onSave(timeline)} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Guardar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default AdminContenido;
