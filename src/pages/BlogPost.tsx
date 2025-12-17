@@ -11,10 +11,29 @@ interface BlogPost {
   content: string | null;
   excerpt: string | null;
   image_url: string | null;
+  youtube_url: string | null;
   category: string;
   published_at: string | null;
   created_at: string;
 }
+
+const getYouTubeEmbedUrl = (url: string): string | null => {
+  if (!url) return null;
+  
+  // Handle various YouTube URL formats
+  const regexPatterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/
+  ];
+  
+  for (const regex of regexPatterns) {
+    const match = url.match(regex);
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}`;
+    }
+  }
+  return null;
+};
 
 const BlogPost = () => {
   const { slug } = useParams();
@@ -128,6 +147,20 @@ const BlogPost = () => {
               <p className="text-lg text-muted-foreground mb-8 font-medium">
                 {post.excerpt}
               </p>
+            )}
+
+            {post.youtube_url && getYouTubeEmbedUrl(post.youtube_url) && (
+              <div className="mb-8">
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    className="absolute top-0 left-0 w-full h-full rounded-xl"
+                    src={getYouTubeEmbedUrl(post.youtube_url)!}
+                    title={post.title}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
             )}
             
             {post.content && (
