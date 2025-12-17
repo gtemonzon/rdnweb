@@ -76,6 +76,20 @@ const Index = () => {
     },
   });
 
+  // Fetch vision from database
+  const { data: visionData } = useQuery({
+    queryKey: ["site-content", "vision"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("content")
+        .eq("section_key", "vision")
+        .single();
+      if (error) throw error;
+      return data?.content as { text: string } | null;
+    },
+  });
+
   // Fetch partners from database
   const { data: partners } = useQuery({
     queryKey: ["partners-public"],
@@ -92,6 +106,7 @@ const Index = () => {
 
   const stats = statsData || defaultStats;
   const missionText = missionData?.text || "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
+  const visionText = visionData?.text || "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
 
   return (
     <Layout>
@@ -169,8 +184,8 @@ const Index = () => {
             </p>
           </div>
         </div>
+      </section>
 
-      
       {/* Programs Section */}
       <section className="py-20 bg-muted">
         <div className="container">
