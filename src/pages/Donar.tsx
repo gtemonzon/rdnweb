@@ -29,12 +29,10 @@ const Donar = () => {
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
             <Heart className="w-16 h-16 mx-auto mb-6 animate-pulse" />
-            <h1 className="font-heading text-4xl md:text-5xl font-bold mb-6">
-              Tu donación transforma vidas
-            </h1>
+            <h1 className="font-heading text-4xl md:text-5xl font-bold mb-6">Tu donación transforma vidas</h1>
             <p className="text-lg text-primary-foreground/90">
-              Cada aporte nos permite continuar protegiendo a niños, niñas 
-              y adolescentes que más lo necesitan. Sé parte del cambio.
+              Cada aporte nos permite continuar protegiendo a niños, niñas y adolescentes que más lo necesitan. Sé parte
+              del cambio.
             </p>
           </div>
         </div>
@@ -46,10 +44,8 @@ const Donar = () => {
           <div className="grid lg:grid-cols-2 gap-12">
             {/* Form */}
             <div className="bg-muted rounded-2xl p-8">
-              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">
-                Hacer una donación
-              </h2>
-              
+              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">Hacer una donación</h2>
+
               {/* Donation Type */}
               <div className="mb-6">
                 <Label className="mb-3 block">Tipo de donación</Label>
@@ -78,11 +74,7 @@ const Donar = () => {
                     </button>
                   ))}
                   <div className="col-span-3">
-                    <Input
-                      type="number"
-                      placeholder="Otro monto"
-                      className="text-center font-semibold"
-                    />
+                    <Input type="number" placeholder="Otro monto" className="text-center font-semibold" />
                   </div>
                 </div>
               </div>
@@ -126,36 +118,24 @@ const Donar = () => {
               </Button>
 
               <p className="text-xs text-center text-muted-foreground mt-4">
-                Tu información está protegida con encriptación SSL. 
-                Recibirás un recibo por correo electrónico.
+                Tu información está protegida con encriptación SSL. Recibirás un recibo por correo electrónico.
               </p>
             </div>
 
             {/* Impact Info */}
             <div>
-              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">
-                Tu impacto
-              </h2>
+              <h2 className="font-heading text-2xl font-bold text-foreground mb-6">Tu impacto</h2>
               <div className="space-y-4 mb-8">
                 {impactItems.map((item) => (
-                  <div
-                    key={item.amount}
-                    className="flex items-center gap-4 p-4 rounded-lg bg-muted"
-                  >
-                    <div className="font-heading font-bold text-xl text-primary">
-                      {item.amount}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {item.description}
-                    </div>
+                  <div key={item.amount} className="flex items-center gap-4 p-4 rounded-lg bg-muted">
+                    <div className="font-heading font-bold text-xl text-primary">{item.amount}</div>
+                    <div className="text-sm text-muted-foreground">{item.description}</div>
                   </div>
                 ))}
               </div>
 
               <div className="bg-soft-green-light rounded-xl p-6">
-                <h3 className="font-heading font-semibold text-lg text-foreground mb-4">
-                  Beneficios para donantes
-                </h3>
+                <h3 className="font-heading font-semibold text-lg text-foreground mb-4">Beneficios para donantes</h3>
                 <ul className="space-y-3">
                   {benefits.map((benefit) => (
                     <li key={benefit} className="flex items-center gap-3 text-sm">
@@ -170,14 +150,20 @@ const Donar = () => {
 
               {/* Bank Info */}
               <div className="mt-8 p-6 rounded-xl border border-border">
-                <h3 className="font-heading font-semibold text-foreground mb-3">
-                  Datos para transferencia
-                </h3>
+                <h3 className="font-heading font-semibold text-foreground mb-3">Datos para transferencia</h3>
                 <div className="space-y-2 text-sm text-muted-foreground">
-                  <p><strong>Banco:</strong> Banco Industrial</p>
-                  <p><strong>Cuenta:</strong> 000-000000-0</p>
-                  <p><strong>Nombre:</strong> Fundación Refugio de la Niñez</p>
-                  <p><strong>Tipo:</strong> Monetaria Quetzales</p>
+                  <p>
+                    <strong>Banco:</strong> Banco Industrial
+                  </p>
+                  <p>
+                    <strong>Cuenta:</strong> 000-031978-0
+                  </p>
+                  <p>
+                    <strong>Nombre:</strong> El Refugio de la Niñez ONG
+                  </p>
+                  <p>
+                    <strong>Tipo:</strong> Monetaria Quetzales
+                  </p>
                 </div>
               </div>
             </div>
@@ -189,12 +175,10 @@ const Donar = () => {
       <section className="py-16 bg-muted">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">
-              Tu confianza es nuestra prioridad
-            </h2>
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">Tu confianza es nuestra prioridad</h2>
             <p className="text-muted-foreground mb-6">
-              Somos una organización transparente y auditada. El 85% de cada 
-              donación va directamente a nuestros programas de protección.
+              Somos una organización transparente y auditada. El 85% de cada donación va directamente a nuestros
+              programas de protección.
             </p>
             <Button variant="outline" asChild>
               <a href="/transparencia">Ver Informes de Transparencia</a>
