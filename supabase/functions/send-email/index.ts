@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import nodemailer from "https://esm.sh/nodemailer@6.9.10";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,23 +36,24 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("SMTP configuration is incomplete");
     }
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: parseInt(smtpPort),
-      secure: false, // Use STARTTLS
-      auth: {
-        user: smtpUsername,
-        pass: smtpPassword,
-      },
-      tls: {
-        ciphers: "SSLv3",
-        rejectUnauthorized: false,
+    console.log("Connecting to SMTP:", smtpHost, smtpPort);
+
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: parseInt(smtpPort),
+        tls: false, // Start without TLS, let STARTTLS upgrade
+        auth: {
+          username: smtpUsername,
+          password: smtpPassword,
+        },
       },
     });
 
     if (emailData.type === "contact") {
       // Send to organization
-      await transporter.sendMail({
+      console.log("Sending contact email to organization...");
+      await client.send({
         from: smtpUsername,
         to: smtpUsername,
         subject: `Nuevo mensaje de contacto: ${emailData.subject || "Sin asunto"}`,
@@ -73,7 +74,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       // Send confirmation to user
-      await transporter.sendMail({
+      console.log("Sending confirmation to user...");
+      await client.send({
         from: smtpUsername,
         to: emailData.email,
         subject: "Hemos recibido tu mensaje - El Refugio de la Niñez",
@@ -91,7 +93,8 @@ const handler = async (req: Request): Promise<Response> => {
       const paymentMethodText = emailData.paymentMethod === "tarjeta" ? "Tarjeta" : "Transferencia bancaria";
 
       // Send to organization
-      await transporter.sendMail({
+      console.log("Sending donation email to organization...");
+      await client.send({
         from: smtpUsername,
         to: smtpUsername,
         subject: `Nueva intención de donación: Q${emailData.amount}`,
@@ -112,7 +115,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
       // Send confirmation to donor
-      await transporter.sendMail({
+      console.log("Sending confirmation to donor...");
+      await client.send({
         from: smtpUsername,
         to: emailData.email,
         subject: "Gracias por tu donación - El Refugio de la Niñez",
@@ -140,6 +144,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    await client.close();
     console.log("Emails sent successfully");
 
     return new Response(
