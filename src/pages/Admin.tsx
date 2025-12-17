@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, Users } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -178,6 +178,14 @@ const Admin = () => {
                   Nuevo Artículo
                 </Link>
               </Button>
+              {userRole === "admin" && (
+                <Button asChild variant="secondary">
+                  <Link to="/admin/usuarios">
+                    <Users className="w-4 h-4 mr-2" />
+                    Usuarios
+                  </Link>
+                </Button>
+              )}
               <Button variant="outline" onClick={handleSignOut}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Salir
