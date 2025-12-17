@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
-
+import ContactMap from "@/components/ContactMap";
 const contactInfo = [
   {
     icon: MapPin,
@@ -101,13 +101,9 @@ const Contacto = () => {
                 ))}
               </div>
 
-              {/* Map Placeholder */}
-              <div className="mt-8 rounded-xl overflow-hidden h-64 bg-muted flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <MapPin className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Mapa interactivo</p>
-                  <p className="text-xs">Ciudad de Guatemala</p>
-                </div>
+              {/* Interactive Map */}
+              <div className="mt-8">
+                <ContactMap />
               </div>
             </div>
           </div>
