@@ -56,10 +56,10 @@ import {
   BlogCustomSettings,
 } from "@/types/permissions";
 
-// Available modules (only showing implemented ones for now)
-const availableModules: ModuleName[] = ['blog'];
+// Available modules (implemented)
+const availableModules: ModuleName[] = ['blog', 'content', 'partners'];
 // Future modules (shown as coming soon)
-const futureModules: ModuleName[] = ['crowdfunding', 'reports', 'donations', 'content', 'partners'];
+const futureModules: ModuleName[] = ['crowdfunding', 'reports', 'donations'];
 
 interface ModulePermissionsData {
   id: string | null;

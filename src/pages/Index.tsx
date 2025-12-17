@@ -2,8 +2,22 @@ import { Link } from "react-router-dom";
 import { Heart, Users, Shield, BookOpen, ArrowRight, HandHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-const stats = [
+interface StatItem {
+  number: string;
+  label: string;
+}
+
+interface Partner {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  website_url: string | null;
+}
+
+const defaultStats: StatItem[] = [
   { number: "30+", label: "Años de experiencia" },
   { number: "50,000+", label: "Niños atendidos" },
   { number: "6", label: "Programas activos" },
@@ -33,15 +47,52 @@ const programs = [
   },
 ];
 
-const partners = [
-  "ACNUR",
-  "Plan International",
-  "UNICEF",
-  "Save the Children",
-  "World Vision",
-];
-
 const Index = () => {
+  // Fetch stats from database
+  const { data: statsData } = useQuery({
+    queryKey: ["site-content", "home_stats"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("content")
+        .eq("section_key", "home_stats")
+        .single();
+      if (error) throw error;
+      return data?.content as unknown as StatItem[] | null;
+    },
+  });
+
+  // Fetch mission from database
+  const { data: missionData } = useQuery({
+    queryKey: ["site-content", "mission"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("content")
+        .eq("section_key", "mission")
+        .single();
+      if (error) throw error;
+      return data?.content as { text: string } | null;
+    },
+  });
+
+  // Fetch partners from database
+  const { data: partners } = useQuery({
+    queryKey: ["partners-public"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("id, name, logo_url, website_url")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data as Partner[];
+    },
+  });
+
+  const stats = statsData || defaultStats;
+  const missionText = missionData?.text || "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -100,9 +151,7 @@ const Index = () => {
               Nuestra Misión
             </h2>
             <p className="text-lg text-muted-foreground">
-              Somos una organización guatemalteca que trabaja por la protección, 
-              restitución y defensa de los derechos de niños, niñas y adolescentes 
-              víctimas de cualquier forma de violencia, abuso, negligencia y explotación.
+              {missionText}
             </p>
           </div>
         </div>
@@ -187,14 +236,48 @@ const Index = () => {
             </p>
           </div>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
-            {partners.map((partner) => (
-              <div
-                key={partner}
-                className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
-              >
-                {partner}
-              </div>
-            ))}
+            {partners && partners.length > 0 ? (
+              partners.map((partner) => (
+                <div
+                  key={partner.id}
+                  className="flex items-center gap-3"
+                >
+                  {partner.logo_url && partner.logo_url !== "/placeholder.svg" ? (
+                    <a 
+                      href={partner.website_url || "#"} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="opacity-70 hover:opacity-100 transition-opacity"
+                    >
+                      <img 
+                        src={partner.logo_url} 
+                        alt={partner.name}
+                        className="h-12 w-auto object-contain"
+                      />
+                    </a>
+                  ) : (
+                    <a 
+                      href={partner.website_url || "#"} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
+                    >
+                      {partner.name}
+                    </a>
+                  )}
+                </div>
+              ))
+            ) : (
+              // Fallback partners if none in database
+              ["ACNUR", "Plan International", "UNICEF", "Save the Children", "World Vision"].map((name) => (
+                <div
+                  key={name}
+                  className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
+                >
+                  {name}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>
