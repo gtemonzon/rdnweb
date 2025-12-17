@@ -5,30 +5,66 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Layout from "@/components/layout/Layout";
 import ContactMap from "@/components/ContactMap";
-const contactInfo = [
-  {
-    icon: MapPin,
-    title: "Dirección",
-    details: ["4ta avenida 10-53 zona 9 Ciudad de Guatemala", "Guatemala, C.A."],
-  },
-  {
-    icon: Phone,
-    title: "Teléfono",
-    details: ["+502 2200-0000", "+502 2200-0001"],
-  },
-  {
-    icon: Mail,
-    title: "Correo",
-    details: ["info@refugiodelaninez.org", "donaciones@refugiodelaninez.org"],
-  },
-  {
-    icon: Clock,
-    title: "Horario",
-    details: ["Lunes a Viernes", "9:00 AM - 4:00 PM"],
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ContactInfo {
+  address: string;
+  phone: string;
+  phone2: string;
+  email: string;
+  email2: string;
+  schedule: string;
+}
+
+const defaultContactInfo: ContactInfo = {
+  address: "4ta avenida 10-53 zona 9 Ciudad de Guatemala, Guatemala",
+  phone: "+502 2200-0000",
+  phone2: "+502 2200-0001",
+  email: "info@refugiodelaninez.org",
+  email2: "donaciones@refugiodelaninez.org",
+  schedule: "Lunes a Viernes, 9:00 AM - 4:00 PM",
+};
 
 const Contacto = () => {
+  const { data: contactData } = useQuery({
+    queryKey: ["site-content", "contact_info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("content")
+        .eq("section_key", "contact_info")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.content as unknown as ContactInfo | null;
+    },
+  });
+
+  const contact = contactData || defaultContactInfo;
+
+  const contactInfoItems = [
+    {
+      icon: MapPin,
+      title: "Dirección",
+      details: [contact.address],
+    },
+    {
+      icon: Phone,
+      title: "Teléfono",
+      details: [contact.phone, contact.phone2].filter(Boolean),
+    },
+    {
+      icon: Mail,
+      title: "Correo",
+      details: [contact.email, contact.email2].filter(Boolean),
+    },
+    {
+      icon: Clock,
+      title: "Horario",
+      details: contact.schedule ? contact.schedule.split(", ") : ["Lunes a Viernes", "9:00 AM - 4:00 PM"],
+    },
+  ];
+
   return (
     <Layout>
       {/* Hero */}
@@ -84,7 +120,7 @@ const Contacto = () => {
             <div>
               <h2 className="font-heading text-2xl font-bold text-foreground mb-6">Información de contacto</h2>
               <div className="space-y-6">
-                {contactInfo.map((item) => (
+                {contactInfoItems.map((item) => (
                   <div key={item.title} className="flex gap-4">
                     <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <item.icon className="w-5 h-5 text-primary" />

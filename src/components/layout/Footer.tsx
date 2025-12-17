@@ -1,7 +1,44 @@
 import { Link } from "react-router-dom";
 import { Heart, Mail, Phone, MapPin, Facebook, Instagram, Twitter, Youtube } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ContactInfo {
+  address: string;
+  phone: string;
+  email: string;
+  facebook: string;
+  instagram: string;
+  twitter: string;
+  youtube: string;
+}
+
+const defaultContact: ContactInfo = {
+  address: "Ciudad de Guatemala, Guatemala",
+  phone: "+502 2200-0000",
+  email: "info@refugiodelaninez.org",
+  facebook: "https://facebook.com/RefugiodelaninezGT",
+  instagram: "https://instagram.com",
+  twitter: "https://twitter.com",
+  youtube: "https://youtube.com",
+};
 
 const Footer = () => {
+  const { data: contactData } = useQuery({
+    queryKey: ["site-content", "contact_info"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_content")
+        .select("content")
+        .eq("section_key", "contact_info")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.content as unknown as ContactInfo | null;
+    },
+  });
+
+  const contact = contactData || defaultContact;
+
   return (
     <footer className="bg-earth-brown text-cream">
       <div className="container py-12">
@@ -51,15 +88,15 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-start gap-3 text-sm text-cream/80">
                 <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                <span>Ciudad de Guatemala, Guatemala</span>
+                <span>{contact.address}</span>
               </li>
               <li className="flex items-center gap-3 text-sm text-cream/80">
                 <Phone className="w-4 h-4 flex-shrink-0 text-primary" />
-                <span>+502 2200-0000</span>
+                <span>{contact.phone}</span>
               </li>
               <li className="flex items-center gap-3 text-sm text-cream/80">
                 <Mail className="w-4 h-4 flex-shrink-0 text-primary" />
-                <span>info@refugiodelaninez.org</span>
+                <span>{contact.email}</span>
               </li>
             </ul>
           </div>
@@ -68,42 +105,50 @@ const Footer = () => {
           <div>
             <h3 className="font-heading font-semibold text-lg mb-4">Síguenos</h3>
             <div className="flex gap-3 mb-6">
-              <a
-                href="https://facebook.com/RefugiodelaninezGT"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
-                aria-label="YouTube"
-              >
-                <Youtube className="w-5 h-5" />
-              </a>
+              {contact.facebook && (
+                <a
+                  href={contact.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
+                  aria-label="Facebook"
+                >
+                  <Facebook className="w-5 h-5" />
+                </a>
+              )}
+              {contact.instagram && (
+                <a
+                  href={contact.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
+                  aria-label="Instagram"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+              )}
+              {contact.twitter && (
+                <a
+                  href={contact.twitter}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
+                  aria-label="Twitter"
+                >
+                  <Twitter className="w-5 h-5" />
+                </a>
+              )}
+              {contact.youtube && (
+                <a
+                  href={contact.youtube}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-cream/10 flex items-center justify-center hover:bg-primary transition-colors"
+                  aria-label="YouTube"
+                >
+                  <Youtube className="w-5 h-5" />
+                </a>
+              )}
             </div>
             <Link
               to="/donar"
