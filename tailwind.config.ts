@@ -47,22 +47,14 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        warm: {
-          orange: "hsl(var(--warm-orange))",
-          "orange-light": "hsl(var(--warm-orange-light))",
+        refugio: {
+          blue: "hsl(var(--refugio-blue))",
+          "blue-light": "hsl(var(--refugio-blue-light))",
+          "blue-pale": "hsl(var(--refugio-blue-pale))",
+          orange: "hsl(var(--refugio-orange))",
+          yellow: "hsl(var(--refugio-yellow))",
+          gold: "hsl(var(--refugio-gold))",
         },
-        soft: {
-          green: "hsl(var(--soft-green))",
-          "green-light": "hsl(var(--soft-green-light))",
-        },
-        golden: {
-          yellow: "hsl(var(--golden-yellow))",
-          "yellow-light": "hsl(var(--golden-yellow-light))",
-        },
-        earth: {
-          brown: "hsl(var(--earth-brown))",
-        },
-        cream: "hsl(var(--cream))",
       },
       fontFamily: {
         heading: ["Nunito", "system-ui", "sans-serif"],

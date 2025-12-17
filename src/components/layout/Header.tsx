@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logo from "@/assets/logo.png";
 
 const navLinks = [
   { name: "Inicio", href: "/" },
@@ -18,14 +19,13 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 border-b border-border">
-      <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-            <Heart className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <span className="font-heading font-bold text-lg text-foreground hidden sm:block">
-            Refugio de la Niñez
-          </span>
+      <div className="container flex h-20 items-center justify-between">
+        <Link to="/" className="flex items-center">
+          <img 
+            src={logo} 
+            alt="El Refugio de la Niñez" 
+            className="h-14 w-auto"
+          />
         </Link>
 
         {/* Desktop Navigation */}
@@ -34,10 +34,10 @@ const Header = () => {
             <Link
               key={link.href}
               to={link.href}
-              className={`text-sm font-medium transition-colors hover:text-primary ${
+              className={`text-sm font-medium transition-colors hover:text-accent ${
                 location.pathname === link.href
-                  ? "text-primary"
-                  : "text-muted-foreground"
+                  ? "text-accent"
+                  : "text-primary"
               }`}
             >
               {link.name}
@@ -46,7 +46,7 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-4">
-          <Button asChild className="hidden sm:flex">
+          <Button asChild className="hidden sm:flex bg-accent hover:bg-accent/90">
             <Link to="/donar">
               <Heart className="w-4 h-4 mr-2" />
               Donar
@@ -55,7 +55,7 @@ const Header = () => {
 
           {/* Mobile Menu Button */}
           <button
-            className="lg:hidden p-2"
+            className="lg:hidden p-2 text-primary"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -78,15 +78,15 @@ const Header = () => {
                 to={link.href}
                 className={`py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
                   location.pathname === link.href
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted"
+                    ? "bg-primary/10 text-accent"
+                    : "text-primary hover:bg-muted"
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 {link.name}
               </Link>
             ))}
-            <Button asChild className="mt-2">
+            <Button asChild className="mt-2 bg-accent hover:bg-accent/90">
               <Link to="/donar" onClick={() => setIsMenuOpen(false)}>
                 <Heart className="w-4 h-4 mr-2" />
                 Donar Ahora
