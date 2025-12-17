@@ -80,7 +80,7 @@ const Index = () => {
         .eq("section_key", "mission")
         .single();
       if (error) throw error;
-      return data?.content as { text: string } | null;
+      return data?.content as { text: string; image_url?: string } | null;
     },
   });
 
@@ -94,7 +94,7 @@ const Index = () => {
         .eq("section_key", "vision")
         .single();
       if (error) throw error;
-      return data?.content as { text: string } | null;
+      return data?.content as { text: string; image_url?: string } | null;
     },
   });
 
@@ -114,7 +114,9 @@ const Index = () => {
 
   const stats = statsData || defaultStats;
   const missionText = missionData?.text || "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
+  const missionImage = missionData?.image_url || "https://images.unsplash.com/photo-1594708767771-a7502f3ed4a4?w=800&q=80";
   const visionText = visionData?.text || "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
+  const visionImage = visionData?.image_url || "https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80";
 
   return (
     <Layout>
@@ -203,9 +205,9 @@ const Index = () => {
               </p>
             </div>
             <div className="order-1 lg:order-2 relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
                 <img
-                  src="https://images.unsplash.com/photo-1594708767771-a7502f3ed4a4?w=800&q=80"
+                  src={missionImage}
                   alt="Niños en actividades"
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                 />
@@ -218,9 +220,9 @@ const Index = () => {
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
                 <img
-                  src="https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80"
+                  src={visionImage}
                   alt="Futuro brillante"
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                 />
