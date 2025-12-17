@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth, BlogPermissions } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -44,9 +44,28 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router-dom";
+import {
+  ModuleName,
+  ModulePermissions,
+  moduleLabels,
+  permissionLabels,
+  allBlogCategories,
+  defaultModulePermissions,
+  BlogCustomSettings,
+} from "@/types/permissions";
 
-const allCategories = ["Noticias", "Impacto", "Historias", "Prevención", "Alianzas", "Incidencia"];
+// Available modules (only showing implemented ones for now)
+const availableModules: ModuleName[] = ['blog'];
+// Future modules (shown as coming soon)
+const futureModules: ModuleName[] = ['crowdfunding', 'reports', 'donations', 'content', 'partners'];
+
+interface ModulePermissionsData {
+  id: string | null;
+  module_name: ModuleName;
+  permissions: ModulePermissions;
+}
 
 interface UserWithRole {
   user_id: string;
@@ -54,18 +73,18 @@ interface UserWithRole {
   full_name: string | null;
   role: "admin" | "editor" | null;
   role_id: string | null;
-  blog_permissions: BlogPermissions | null;
-  blog_permissions_id: string | null;
+  module_permissions: ModulePermissionsData[];
 }
 
-const defaultPermissions: BlogPermissions = {
+const defaultBlogPermissions: ModulePermissions = {
+  can_view: true,
   can_create: true,
   can_edit_own: true,
   can_edit_all: false,
   can_publish: false,
   can_delete_own: false,
   can_delete_all: false,
-  allowed_categories: null,
+  custom_settings: {},
 };
 
 const AdminUsers = () => {
@@ -74,8 +93,9 @@ const AdminUsers = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [editingPermissions, setEditingPermissions] = useState<UserWithRole | null>(null);
-  const [permissionsForm, setPermissionsForm] = useState<BlogPermissions>(defaultPermissions);
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [activeModule, setActiveModule] = useState<ModuleName>('blog');
+  const [permissionsForm, setPermissionsForm] = useState<ModulePermissions>(defaultBlogPermissions);
   const [savingPermissions, setSavingPermissions] = useState(false);
 
   useEffect(() => {
@@ -123,19 +143,34 @@ const AdminUsers = () => {
       return;
     }
 
-    // Fetch all blog permissions
-    const { data: blogPerms, error: blogPermsError } = await supabase
-      .from("blog_permissions")
+    // Fetch all module permissions
+    const { data: modulePerms, error: modulePermsError } = await supabase
+      .from("module_permissions")
       .select("*");
 
-    if (blogPermsError) {
-      console.error("Error fetching blog permissions:", blogPermsError);
+    if (modulePermsError) {
+      console.error("Error fetching module permissions:", modulePermsError);
     }
 
     // Combine profiles with roles and permissions
     const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => {
       const userRoleData = roles?.find((r) => r.user_id === profile.user_id);
-      const userBlogPerms = blogPerms?.find((p) => p.user_id === profile.user_id);
+      const userModulePerms = (modulePerms || [])
+        .filter((p: any) => p.user_id === profile.user_id)
+        .map((p: any) => ({
+          id: p.id,
+          module_name: p.module_name as ModuleName,
+          permissions: {
+            can_view: p.can_view,
+            can_create: p.can_create,
+            can_edit_own: p.can_edit_own,
+            can_edit_all: p.can_edit_all,
+            can_publish: p.can_publish,
+            can_delete_own: p.can_delete_own,
+            can_delete_all: p.can_delete_all,
+            custom_settings: p.custom_settings || {},
+          },
+        }));
       
       return {
         user_id: profile.user_id,
@@ -143,16 +178,7 @@ const AdminUsers = () => {
         full_name: profile.full_name,
         role: userRoleData?.role as "admin" | "editor" | null,
         role_id: userRoleData?.id || null,
-        blog_permissions: userBlogPerms ? {
-          can_create: userBlogPerms.can_create,
-          can_edit_own: userBlogPerms.can_edit_own,
-          can_edit_all: userBlogPerms.can_edit_all,
-          can_publish: userBlogPerms.can_publish,
-          can_delete_own: userBlogPerms.can_delete_own,
-          can_delete_all: userBlogPerms.can_delete_all,
-          allowed_categories: userBlogPerms.allowed_categories,
-        } : null,
-        blog_permissions_id: userBlogPerms?.id || null,
+        module_permissions: userModulePerms,
       };
     });
 
@@ -193,13 +219,20 @@ const AdminUsers = () => {
     }
 
     // If assigning editor role for the first time, create default blog permissions
-    if (role === "editor" && !existingUser?.blog_permissions_id) {
+    if (role === "editor" && !existingUser?.module_permissions.some(p => p.module_name === 'blog')) {
       await supabase
-        .from("blog_permissions")
+        .from("module_permissions")
         .insert({
           user_id: userId,
-          ...defaultPermissions,
-          allowed_categories: null,
+          module_name: 'blog',
+          can_view: true,
+          can_create: true,
+          can_edit_own: true,
+          can_edit_all: false,
+          can_publish: false,
+          can_delete_own: false,
+          can_delete_all: false,
+          custom_settings: {},
         });
     }
 
@@ -225,9 +258,9 @@ const AdminUsers = () => {
       return;
     }
 
-    // Also remove blog permissions
+    // Also remove all module permissions
     await supabase
-      .from("blog_permissions")
+      .from("module_permissions")
       .delete()
       .eq("user_id", userId);
 
@@ -239,31 +272,47 @@ const AdminUsers = () => {
   };
 
   const openPermissionsDialog = (userWithRole: UserWithRole) => {
-    setEditingPermissions(userWithRole);
-    setPermissionsForm(userWithRole.blog_permissions || defaultPermissions);
+    setEditingUser(userWithRole);
+    setActiveModule('blog');
+    const blogPerms = userWithRole.module_permissions.find(p => p.module_name === 'blog');
+    setPermissionsForm(blogPerms?.permissions || defaultBlogPermissions);
+  };
+
+  const handleModuleChange = (module: ModuleName) => {
+    if (!editingUser) return;
+    setActiveModule(module);
+    const modulePerms = editingUser.module_permissions.find(p => p.module_name === module);
+    setPermissionsForm(modulePerms?.permissions || defaultModulePermissions);
   };
 
   const savePermissions = async () => {
-    if (!editingPermissions) return;
+    if (!editingUser) return;
     
     setSavingPermissions(true);
 
+    const existingPerm = editingUser.module_permissions.find(p => p.module_name === activeModule);
+
     const permissionsData = {
-      user_id: editingPermissions.user_id,
+      user_id: editingUser.user_id,
+      module_name: activeModule,
+      can_view: permissionsForm.can_view,
       can_create: permissionsForm.can_create,
       can_edit_own: permissionsForm.can_edit_own,
       can_edit_all: permissionsForm.can_edit_all,
       can_publish: permissionsForm.can_publish,
       can_delete_own: permissionsForm.can_delete_own,
       can_delete_all: permissionsForm.can_delete_all,
-      allowed_categories: permissionsForm.allowed_categories,
+      custom_settings: permissionsForm.custom_settings as Record<string, unknown>,
     };
 
-    if (editingPermissions.blog_permissions_id) {
+    if (existingPerm?.id) {
       const { error } = await supabase
-        .from("blog_permissions")
-        .update(permissionsData)
-        .eq("id", editingPermissions.blog_permissions_id);
+        .from("module_permissions")
+        .update({
+          ...permissionsData,
+          custom_settings: JSON.parse(JSON.stringify(permissionsData.custom_settings)),
+        })
+        .eq("id", existingPerm.id);
 
       if (error) {
         toast({
@@ -276,8 +325,11 @@ const AdminUsers = () => {
       }
     } else {
       const { error } = await supabase
-        .from("blog_permissions")
-        .insert(permissionsData);
+        .from("module_permissions")
+        .insert({
+          ...permissionsData,
+          custom_settings: JSON.parse(JSON.stringify(permissionsData.custom_settings)),
+        });
 
       if (error) {
         toast({
@@ -292,48 +344,72 @@ const AdminUsers = () => {
 
     toast({
       title: "Éxito",
-      description: "Permisos guardados correctamente",
+      description: `Permisos de ${moduleLabels[activeModule]} guardados correctamente`,
     });
     setSavingPermissions(false);
-    setEditingPermissions(null);
+    setEditingUser(null);
     fetchUsers();
   };
 
+  // Blog-specific category helpers
   const toggleCategory = (category: string) => {
-    if (permissionsForm.allowed_categories === null) {
+    const currentCategories = (permissionsForm.custom_settings as BlogCustomSettings).allowed_categories || null;
+    
+    if (currentCategories === null || currentCategories === undefined) {
       // If all categories were allowed, now restrict to all except this one
       setPermissionsForm({
         ...permissionsForm,
-        allowed_categories: allCategories.filter(c => c !== category),
+        custom_settings: {
+          ...permissionsForm.custom_settings,
+          allowed_categories: allBlogCategories.filter(c => c !== category),
+        },
       });
-    } else if (permissionsForm.allowed_categories.includes(category)) {
+    } else if (currentCategories.includes(category)) {
       // Remove category
-      const newCategories = permissionsForm.allowed_categories.filter(c => c !== category);
+      const newCategories = currentCategories.filter(c => c !== category);
       setPermissionsForm({
         ...permissionsForm,
-        allowed_categories: newCategories.length === 0 ? [] : newCategories,
+        custom_settings: {
+          ...permissionsForm.custom_settings,
+          allowed_categories: newCategories.length === 0 ? [] : newCategories,
+        },
       });
     } else {
       // Add category
-      const newCategories = [...permissionsForm.allowed_categories, category];
-      // If all categories are selected, set to null
-      if (newCategories.length === allCategories.length) {
+      const newCategories = [...currentCategories, category];
+      // If all categories are selected, set to null (all allowed)
+      if (newCategories.length === allBlogCategories.length) {
         setPermissionsForm({
           ...permissionsForm,
-          allowed_categories: null,
+          custom_settings: {
+            ...permissionsForm.custom_settings,
+            allowed_categories: null,
+          },
         });
       } else {
         setPermissionsForm({
           ...permissionsForm,
-          allowed_categories: newCategories,
+          custom_settings: {
+            ...permissionsForm.custom_settings,
+            allowed_categories: newCategories,
+          },
         });
       }
     }
   };
 
   const isCategorySelected = (category: string) => {
-    if (permissionsForm.allowed_categories === null) return true;
-    return permissionsForm.allowed_categories.includes(category);
+    const currentCategories = (permissionsForm.custom_settings as BlogCustomSettings).allowed_categories;
+    if (currentCategories === null || currentCategories === undefined) return true;
+    return currentCategories.includes(category);
+  };
+
+  const getCategoriesText = () => {
+    const currentCategories = (permissionsForm.custom_settings as BlogCustomSettings).allowed_categories;
+    if (currentCategories === null || currentCategories === undefined) {
+      return "Todas las categorías están permitidas";
+    }
+    return `${currentCategories.length} categoría(s) seleccionada(s)`;
   };
 
   if (loading) {
@@ -385,7 +461,7 @@ const AdminUsers = () => {
                 Gestión de Usuarios
               </h1>
               <p className="text-muted-foreground">
-                Asigna roles y permisos granulares a los usuarios
+                Asigna roles y permisos modulares a los usuarios
               </p>
             </div>
             <Button asChild variant="outline">
@@ -410,6 +486,7 @@ const AdminUsers = () => {
                     <TableHead>Usuario</TableHead>
                     <TableHead>ID</TableHead>
                     <TableHead>Rol</TableHead>
+                    <TableHead>Módulos</TableHead>
                     <TableHead>Asignar Rol</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -439,6 +516,21 @@ const AdminUsers = () => {
                         )}
                       </TableCell>
                       <TableCell>
+                        {u.role === "admin" ? (
+                          <span className="text-xs text-muted-foreground">Todos</span>
+                        ) : u.module_permissions.length > 0 ? (
+                          <div className="flex gap-1 flex-wrap">
+                            {u.module_permissions.map(p => (
+                              <span key={p.module_name} className="px-1.5 py-0.5 bg-muted rounded text-xs">
+                                {moduleLabels[p.module_name]}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Select
                           value={u.role || ""}
                           onValueChange={(value) => assignRole(u.user_id, value as "admin" | "editor")}
@@ -465,113 +557,83 @@ const AdminUsers = () => {
                                   <Settings className="w-4 h-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-md">
+                              <DialogContent className="max-w-lg">
                                 <DialogHeader>
-                                  <DialogTitle>Permisos de Blog</DialogTitle>
+                                  <DialogTitle>Permisos por Módulo</DialogTitle>
                                   <DialogDescription>
-                                    Configura los permisos granulares para {editingPermissions?.full_name || "este usuario"}
+                                    Configura los permisos granulares para {editingUser?.full_name || "este usuario"}
                                   </DialogDescription>
                                 </DialogHeader>
                                 
-                                <div className="space-y-4 py-4">
-                                  <div className="space-y-3">
-                                    <h4 className="font-medium text-sm">Permisos de Artículos</h4>
-                                    
-                                    <div className="flex items-center justify-between">
-                                      <Label htmlFor="can_create">Puede crear artículos</Label>
-                                      <Switch
-                                        id="can_create"
-                                        checked={permissionsForm.can_create}
-                                        onCheckedChange={(checked) => 
-                                          setPermissionsForm({...permissionsForm, can_create: checked})
-                                        }
-                                      />
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between">
-                                      <Label htmlFor="can_edit_own">Puede editar sus artículos</Label>
-                                      <Switch
-                                        id="can_edit_own"
-                                        checked={permissionsForm.can_edit_own}
-                                        onCheckedChange={(checked) => 
-                                          setPermissionsForm({...permissionsForm, can_edit_own: checked})
-                                        }
-                                      />
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between">
-                                      <Label htmlFor="can_edit_all">Puede editar todos los artículos</Label>
-                                      <Switch
-                                        id="can_edit_all"
-                                        checked={permissionsForm.can_edit_all}
-                                        onCheckedChange={(checked) => 
-                                          setPermissionsForm({...permissionsForm, can_edit_all: checked})
-                                        }
-                                      />
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between">
-                                      <Label htmlFor="can_publish">Puede publicar/despublicar</Label>
-                                      <Switch
-                                        id="can_publish"
-                                        checked={permissionsForm.can_publish}
-                                        onCheckedChange={(checked) => 
-                                          setPermissionsForm({...permissionsForm, can_publish: checked})
-                                        }
-                                      />
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between">
-                                      <Label htmlFor="can_delete_own">Puede eliminar sus artículos</Label>
-                                      <Switch
-                                        id="can_delete_own"
-                                        checked={permissionsForm.can_delete_own}
-                                        onCheckedChange={(checked) => 
-                                          setPermissionsForm({...permissionsForm, can_delete_own: checked})
-                                        }
-                                      />
-                                    </div>
-                                    
-                                    <div className="flex items-center justify-between">
-                                      <Label htmlFor="can_delete_all">Puede eliminar todos los artículos</Label>
-                                      <Switch
-                                        id="can_delete_all"
-                                        checked={permissionsForm.can_delete_all}
-                                        onCheckedChange={(checked) => 
-                                          setPermissionsForm({...permissionsForm, can_delete_all: checked})
-                                        }
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-3 pt-4 border-t">
-                                    <h4 className="font-medium text-sm">Categorías Permitidas</h4>
-                                    <p className="text-xs text-muted-foreground">
-                                      {permissionsForm.allowed_categories === null 
-                                        ? "Todas las categorías están permitidas" 
-                                        : `${permissionsForm.allowed_categories.length} categoría(s) seleccionada(s)`}
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                      {allCategories.map((category) => (
-                                        <div key={category} className="flex items-center space-x-2">
-                                          <Checkbox
-                                            id={`cat-${category}`}
-                                            checked={isCategorySelected(category)}
-                                            onCheckedChange={() => toggleCategory(category)}
+                                <Tabs value={activeModule} onValueChange={(v) => handleModuleChange(v as ModuleName)}>
+                                  <TabsList className="grid grid-cols-3 mb-4">
+                                    {availableModules.map(mod => (
+                                      <TabsTrigger key={mod} value={mod}>
+                                        {moduleLabels[mod]}
+                                      </TabsTrigger>
+                                    ))}
+                                    {futureModules.slice(0, 2).map(mod => (
+                                      <TabsTrigger key={mod} value={mod} disabled className="opacity-50">
+                                        {moduleLabels[mod]}
+                                      </TabsTrigger>
+                                    ))}
+                                  </TabsList>
+                                  
+                                  {/* Blog permissions */}
+                                  <TabsContent value="blog" className="space-y-4">
+                                    <div className="space-y-3">
+                                      <h4 className="font-medium text-sm">Permisos de Artículos</h4>
+                                      
+                                      {(['can_view', 'can_create', 'can_edit_own', 'can_edit_all', 'can_publish', 'can_delete_own', 'can_delete_all'] as const).map(perm => (
+                                        <div key={perm} className="flex items-center justify-between">
+                                          <Label htmlFor={perm}>{permissionLabels[perm]}</Label>
+                                          <Switch
+                                            id={perm}
+                                            checked={permissionsForm[perm]}
+                                            onCheckedChange={(checked) => 
+                                              setPermissionsForm({...permissionsForm, [perm]: checked})
+                                            }
                                           />
-                                          <Label htmlFor={`cat-${category}`} className="text-sm">
-                                            {category}
-                                          </Label>
                                         </div>
                                       ))}
                                     </div>
-                                  </div>
-                                </div>
+
+                                    <div className="space-y-3 pt-4 border-t">
+                                      <h4 className="font-medium text-sm">Categorías Permitidas</h4>
+                                      <p className="text-xs text-muted-foreground">
+                                        {getCategoriesText()}
+                                      </p>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {allBlogCategories.map((category) => (
+                                          <div key={category} className="flex items-center space-x-2">
+                                            <Checkbox
+                                              id={`cat-${category}`}
+                                              checked={isCategorySelected(category)}
+                                              onCheckedChange={() => toggleCategory(category)}
+                                            />
+                                            <Label htmlFor={`cat-${category}`} className="text-sm">
+                                              {category}
+                                            </Label>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </TabsContent>
+                                  
+                                  {/* Future modules placeholder */}
+                                  {futureModules.map(mod => (
+                                    <TabsContent key={mod} value={mod}>
+                                      <div className="text-center py-8 text-muted-foreground">
+                                        <p>Módulo de {moduleLabels[mod]} próximamente</p>
+                                      </div>
+                                    </TabsContent>
+                                  ))}
+                                </Tabs>
 
                                 <DialogFooter>
                                   <Button 
                                     onClick={savePermissions} 
-                                    disabled={savingPermissions}
+                                    disabled={savingPermissions || !availableModules.includes(activeModule)}
                                   >
                                     {savingPermissions ? "Guardando..." : "Guardar Permisos"}
                                   </Button>
@@ -590,7 +652,7 @@ const AdminUsers = () => {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>¿Eliminar rol?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    El usuario perderá acceso al panel de administración.
+                                    El usuario perderá acceso al panel de administración y todos sus permisos de módulos.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -612,22 +674,25 @@ const AdminUsers = () => {
           )}
 
           <div className="mt-8 p-4 bg-muted rounded-lg">
-            <h3 className="font-semibold mb-2">Sobre los roles y permisos:</h3>
+            <h3 className="font-semibold mb-2">Sistema de Permisos Modular:</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li><strong>Administrador:</strong> Acceso total automático a todas las funciones del blog y gestión de usuarios.</li>
-              <li><strong>Editor:</strong> Permisos personalizables. Haz clic en el ícono de configuración (⚙️) para gestionar sus permisos específicos.</li>
+              <li><strong>Administrador:</strong> Acceso total automático a todos los módulos y gestión de usuarios.</li>
+              <li><strong>Editor:</strong> Permisos personalizables por módulo. Haz clic en ⚙️ para configurar.</li>
             </ul>
             <div className="mt-3 pt-3 border-t border-border">
-              <h4 className="font-medium text-sm mb-1">Permisos disponibles:</h4>
-              <ul className="text-xs text-muted-foreground space-y-0.5">
-                <li>• <strong>Crear:</strong> Permite crear nuevos artículos</li>
-                <li>• <strong>Editar propios:</strong> Permite editar artículos creados por el usuario</li>
-                <li>• <strong>Editar todos:</strong> Permite editar cualquier artículo</li>
-                <li>• <strong>Publicar:</strong> Permite publicar y despublicar artículos</li>
-                <li>• <strong>Eliminar propios:</strong> Permite eliminar artículos creados por el usuario</li>
-                <li>• <strong>Eliminar todos:</strong> Permite eliminar cualquier artículo</li>
-                <li>• <strong>Categorías:</strong> Restringe las categorías en las que puede trabajar</li>
-              </ul>
+              <h4 className="font-medium text-sm mb-1">Módulos disponibles:</h4>
+              <div className="flex gap-2 flex-wrap mt-2">
+                {availableModules.map(mod => (
+                  <span key={mod} className="px-2 py-1 bg-primary/10 text-primary rounded text-xs">
+                    {moduleLabels[mod]} ✓
+                  </span>
+                ))}
+                {futureModules.map(mod => (
+                  <span key={mod} className="px-2 py-1 bg-muted-foreground/10 text-muted-foreground rounded text-xs">
+                    {moduleLabels[mod]} (próximamente)
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>

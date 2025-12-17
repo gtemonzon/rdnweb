@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { BlogCustomSettings, allBlogCategories } from "@/types/permissions";
 
 interface BlogPost {
   id: string;
@@ -37,11 +38,14 @@ interface BlogPost {
 }
 
 const Admin = () => {
-  const { user, userRole, blogPermissions, loading, signOut } = useAuth();
+  const { user, userRole, hasPermission, getCustomSettings, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
+
+  // Get blog-specific custom settings
+  const blogSettings = getCustomSettings<BlogCustomSettings>('blog');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -125,22 +129,22 @@ const Admin = () => {
 
   // Check if user can edit a specific post
   const canEditPost = (post: BlogPost) => {
-    if (blogPermissions.can_edit_all) return true;
-    if (blogPermissions.can_edit_own && post.author_id === user?.id) return true;
+    if (hasPermission('blog', 'can_edit_all')) return true;
+    if (hasPermission('blog', 'can_edit_own') && post.author_id === user?.id) return true;
     return false;
   };
 
   // Check if user can delete a specific post
   const canDeletePost = (post: BlogPost) => {
-    if (blogPermissions.can_delete_all) return true;
-    if (blogPermissions.can_delete_own && post.author_id === user?.id) return true;
+    if (hasPermission('blog', 'can_delete_all')) return true;
+    if (hasPermission('blog', 'can_delete_own') && post.author_id === user?.id) return true;
     return false;
   };
 
   // Check if user can access a category
   const canAccessCategory = (category: string) => {
-    if (blogPermissions.allowed_categories === null) return true;
-    return blogPermissions.allowed_categories.includes(category);
+    if (!blogSettings.allowed_categories) return true;
+    return blogSettings.allowed_categories.includes(category);
   };
 
   if (loading) {
@@ -193,7 +197,7 @@ const Admin = () => {
               </p>
             </div>
             <div className="flex gap-4">
-              {blogPermissions.can_create && (
+              {hasPermission('blog', 'can_create') && (
                 <Button asChild>
                   <Link to="/admin/nuevo">
                     <Plus className="w-4 h-4 mr-2" />
@@ -221,7 +225,7 @@ const Admin = () => {
           ) : posts.length === 0 ? (
             <div className="text-center py-12 bg-muted rounded-lg">
               <p className="text-muted-foreground mb-4">No hay artículos aún</p>
-              {blogPermissions.can_create && (
+              {hasPermission('blog', 'can_create') && (
                 <Button asChild>
                   <Link to="/admin/nuevo">
                     <Plus className="w-4 h-4 mr-2" />
@@ -259,9 +263,9 @@ const Admin = () => {
                       <TableCell>
                         {new Date(post.created_at).toLocaleDateString("es-GT")}
                       </TableCell>
-                      <TableCell className="text-right">
+                        <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          {blogPermissions.can_publish && canAccessCategory(post.category) && (
+                          {hasPermission('blog', 'can_publish') && canAccessCategory(post.category) && (
                             <Button
                               size="sm"
                               variant="ghost"
