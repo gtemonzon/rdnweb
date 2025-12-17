@@ -157,6 +157,20 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Vision Section */}
+      <section className="py-20 bg-card">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Nuestra Visión
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              {visionText}
+            </p>
+          </div>
+        </div>
+
+      
       {/* Programs Section */}
       <section className="py-20 bg-muted">
         <div className="container">
