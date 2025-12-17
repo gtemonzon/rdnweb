@@ -104,6 +104,54 @@ export type Database = {
         }
         Relationships: []
       }
+      module_permissions: {
+        Row: {
+          can_create: boolean
+          can_delete_all: boolean
+          can_delete_own: boolean
+          can_edit_all: boolean
+          can_edit_own: boolean
+          can_publish: boolean
+          can_view: boolean
+          created_at: string
+          custom_settings: Json | null
+          id: string
+          module_name: Database["public"]["Enums"]["app_module"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_create?: boolean
+          can_delete_all?: boolean
+          can_delete_own?: boolean
+          can_edit_all?: boolean
+          can_edit_own?: boolean
+          can_publish?: boolean
+          can_view?: boolean
+          created_at?: string
+          custom_settings?: Json | null
+          id?: string
+          module_name: Database["public"]["Enums"]["app_module"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_create?: boolean
+          can_delete_all?: boolean
+          can_delete_own?: boolean
+          can_edit_all?: boolean
+          can_edit_own?: boolean
+          can_publish?: boolean
+          can_view?: boolean
+          created_at?: string
+          custom_settings?: Json | null
+          id?: string
+          module_name?: Database["public"]["Enums"]["app_module"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -161,8 +209,24 @@ export type Database = {
         Args: { _category: string; _user_id: string }
         Returns: boolean
       }
+      can_access_module_category: {
+        Args: {
+          _category: string
+          _module: Database["public"]["Enums"]["app_module"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_blog_permission: {
         Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
+      has_module_permission: {
+        Args: {
+          _module: Database["public"]["Enums"]["app_module"]
+          _permission: string
+          _user_id: string
+        }
         Returns: boolean
       }
       has_role: {
@@ -174,6 +238,13 @@ export type Database = {
       }
     }
     Enums: {
+      app_module:
+        | "blog"
+        | "crowdfunding"
+        | "reports"
+        | "donations"
+        | "content"
+        | "partners"
       app_role: "admin" | "editor"
     }
     CompositeTypes: {
@@ -302,6 +373,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_module: [
+        "blog",
+        "crowdfunding",
+        "reports",
+        "donations",
+        "content",
+        "partners",
+      ],
       app_role: ["admin", "editor"],
     },
   },
