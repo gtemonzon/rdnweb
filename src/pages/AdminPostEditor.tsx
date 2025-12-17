@@ -28,6 +28,7 @@ const AdminPostEditor = () => {
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [category, setCategory] = useState("Noticias");
   const [published, setPublished] = useState(false);
 
@@ -63,6 +64,7 @@ const AdminPostEditor = () => {
       setExcerpt(data.excerpt || "");
       setContent(data.content || "");
       setImageUrl(data.image_url || "");
+      setYoutubeUrl((data as any).youtube_url || "");
       setCategory(data.category);
       setPublished(data.published);
     }
@@ -104,6 +106,7 @@ const AdminPostEditor = () => {
       excerpt: excerpt || null,
       content: content || null,
       image_url: imageUrl || null,
+      youtube_url: youtubeUrl || null,
       category,
       published,
       published_at: published ? new Date().toISOString() : null,
@@ -237,6 +240,19 @@ const AdminPostEditor = () => {
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="https://ejemplo.com/imagen.jpg"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="youtubeUrl">URL de Video de YouTube</Label>
+                <Input
+                  id="youtubeUrl"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=XXXXXXX"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pega la URL completa del video de YouTube
+                </p>
               </div>
 
               <div>
