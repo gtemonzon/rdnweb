@@ -4,80 +4,78 @@
 
 @layer base {
   :root {
-    /* Warm, human color palette for Refugio de la Niñez */
-    --background: 40 33% 98%;
-    --foreground: 20 25% 15%;
+    /* Official Refugio de la Niñez color palette */
+    --background: 0 0% 100%;
+    --foreground: 203 100% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 20 25% 15%;
+    --card-foreground: 203 100% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 20 25% 15%;
+    --popover-foreground: 203 100% 20%;
 
-    /* Primary: Warm orange - hope and energy */
-    --primary: 24 85% 55%;
+    /* Primary: Pantone 293 C - #0067B1 (azul oscuro) */
+    --primary: 203 100% 35%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft green - growth and protection */
-    --secondary: 142 40% 45%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary: Pantone 297 C - #72CDF4 (azul claro) */
+    --secondary: 199 85% 70%;
+    --secondary-foreground: 203 100% 20%;
 
-    /* Muted: Warm beige */
-    --muted: 35 30% 93%;
-    --muted-foreground: 20 15% 40%;
+    /* Muted: Light blue tint */
+    --muted: 199 40% 95%;
+    --muted-foreground: 203 50% 40%;
 
-    /* Accent: Golden yellow - warmth and joy */
-    --accent: 45 90% 55%;
-    --accent-foreground: 20 25% 15%;
+    /* Accent: Pantone 1585 C - #F68A33 (naranja) */
+    --accent: 27 92% 58%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 20% 88%;
-    --input: 30 20% 88%;
-    --ring: 24 85% 55%;
+    --border: 199 30% 88%;
+    --input: 199 30% 88%;
+    --ring: 203 100% 35%;
 
     --radius: 0.75rem;
 
-    /* Custom colors */
-    --warm-orange: 24 85% 55%;
-    --warm-orange-light: 30 90% 95%;
-    --soft-green: 142 40% 45%;
-    --soft-green-light: 142 35% 92%;
-    --golden-yellow: 45 90% 55%;
-    --golden-yellow-light: 45 85% 92%;
-    --earth-brown: 20 25% 30%;
-    --cream: 40 33% 96%;
+    /* Custom brand colors */
+    --refugio-blue: 203 100% 35%;
+    --refugio-blue-light: 199 85% 70%;
+    --refugio-orange: 27 92% 58%;
+    --refugio-yellow: 56 87% 61%;
+    --refugio-gold: 34 95% 59%;
+    --refugio-blue-pale: 199 60% 95%;
   }
 
   .dark {
-    --background: 20 25% 10%;
-    --foreground: 40 33% 96%;
+    --background: 203 50% 8%;
+    --foreground: 199 40% 95%;
 
-    --card: 20 25% 12%;
-    --card-foreground: 40 33% 96%;
+    --card: 203 50% 10%;
+    --card-foreground: 199 40% 95%;
 
-    --popover: 20 25% 12%;
-    --popover-foreground: 40 33% 96%;
+    --popover: 203 50% 10%;
+    --popover-foreground: 199 40% 95%;
 
-    --primary: 24 85% 55%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 199 85% 60%;
+    --primary-foreground: 203 100% 10%;
 
-    --secondary: 142 40% 40%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 203 60% 30%;
+    --secondary-foreground: 199 40% 95%;
 
-    --muted: 20 20% 20%;
-    --muted-foreground: 35 20% 65%;
+    --muted: 203 40% 15%;
+    --muted-foreground: 199 30% 65%;
 
-    --accent: 45 90% 55%;
-    --accent-foreground: 20 25% 10%;
+    --accent: 27 92% 58%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 20 20% 25%;
-    --input: 20 20% 25%;
-    --ring: 24 85% 55%;
+    --border: 203 30% 20%;
+    --input: 203 30% 20%;
+    --ring: 199 85% 60%;
   }
 }
 
@@ -98,10 +96,14 @@
   }
   
   .gradient-warm {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    background: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--refugio-gold)) 100%);
   }
   
   .gradient-hope {
-    background: linear-gradient(180deg, hsl(var(--warm-orange-light)) 0%, hsl(var(--background)) 100%);
+    background: linear-gradient(180deg, hsl(var(--refugio-blue-pale)) 0%, hsl(var(--background)) 100%);
+  }
+  
+  .gradient-brand {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
   }
 }
