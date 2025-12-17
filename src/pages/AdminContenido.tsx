@@ -223,26 +223,36 @@ const MissionVisionEditor = ({
 }: { 
   missionSection?: ContentSection; 
   visionSection?: ContentSection;
-  onSaveMission: (content: { text: string }) => void;
-  onSaveVision: (content: { text: string }) => void;
+  onSaveMission: (content: { text: string; image_url?: string }) => void;
+  onSaveVision: (content: { text: string; image_url?: string }) => void;
   isSaving: boolean;
 }) => {
-  const getMissionText = () => {
-    if (missionSection?.content && typeof missionSection.content === 'object' && 'text' in (missionSection.content as object)) {
-      return (missionSection.content as { text: string }).text;
+  const getMissionContent = () => {
+    if (missionSection?.content && typeof missionSection.content === 'object') {
+      const content = missionSection.content as { text?: string; image_url?: string };
+      return { 
+        text: content.text || "", 
+        image_url: content.image_url || "" 
+      };
     }
-    return "";
+    return { text: "", image_url: "" };
   };
 
-  const getVisionText = () => {
-    if (visionSection?.content && typeof visionSection.content === 'object' && 'text' in (visionSection.content as object)) {
-      return (visionSection.content as { text: string }).text;
+  const getVisionContent = () => {
+    if (visionSection?.content && typeof visionSection.content === 'object') {
+      const content = visionSection.content as { text?: string; image_url?: string };
+      return { 
+        text: content.text || "", 
+        image_url: content.image_url || "" 
+      };
     }
-    return "";
+    return { text: "", image_url: "" };
   };
 
-  const [mission, setMission] = useState(getMissionText());
-  const [vision, setVision] = useState(getVisionText());
+  const [mission, setMission] = useState(getMissionContent().text);
+  const [missionImage, setMissionImage] = useState(getMissionContent().image_url);
+  const [vision, setVision] = useState(getVisionContent().text);
+  const [visionImage, setVisionImage] = useState(getVisionContent().image_url);
 
   return (
     <div className="space-y-6">
@@ -258,7 +268,20 @@ const MissionVisionEditor = ({
             rows={4}
             placeholder="Escribe la misión de la organización..."
           />
-          <Button onClick={() => onSaveMission({ text: mission })} disabled={isSaving}>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-2 block">URL de Imagen</label>
+            <Input
+              value={missionImage}
+              onChange={(e) => setMissionImage(e.target.value)}
+              placeholder="https://ejemplo.com/imagen-mision.jpg"
+            />
+            {missionImage && (
+              <div className="mt-3 rounded-lg overflow-hidden max-w-xs">
+                <img src={missionImage} alt="Vista previa" className="w-full h-32 object-cover" />
+              </div>
+            )}
+          </div>
+          <Button onClick={() => onSaveMission({ text: mission, image_url: missionImage })} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Guardar Misión
           </Button>
@@ -277,7 +300,20 @@ const MissionVisionEditor = ({
             rows={4}
             placeholder="Escribe la visión de la organización..."
           />
-          <Button onClick={() => onSaveVision({ text: vision })} disabled={isSaving}>
+          <div>
+            <label className="text-sm font-medium text-foreground mb-2 block">URL de Imagen</label>
+            <Input
+              value={visionImage}
+              onChange={(e) => setVisionImage(e.target.value)}
+              placeholder="https://ejemplo.com/imagen-vision.jpg"
+            />
+            {visionImage && (
+              <div className="mt-3 rounded-lg overflow-hidden max-w-xs">
+                <img src={visionImage} alt="Vista previa" className="w-full h-32 object-cover" />
+              </div>
+            )}
+          </div>
+          <Button onClick={() => onSaveVision({ text: vision, image_url: visionImage })} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Guardar Visión
           </Button>
