@@ -102,11 +102,12 @@ const AdminContenido = () => {
         </div>
 
         <Tabs defaultValue="stats" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="stats">Estadísticas</TabsTrigger>
             <TabsTrigger value="mission">Misión/Visión</TabsTrigger>
             <TabsTrigger value="values">Valores</TabsTrigger>
             <TabsTrigger value="timeline">Historia</TabsTrigger>
+            <TabsTrigger value="contact">Contacto</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stats">
@@ -139,6 +140,14 @@ const AdminContenido = () => {
             <TimelineEditor 
               section={getSection("timeline")} 
               onSave={(content) => updateMutation.mutate({ sectionKey: "timeline", content: JSON.parse(JSON.stringify(content)) })}
+              isSaving={updateMutation.isPending}
+            />
+          </TabsContent>
+
+          <TabsContent value="contact">
+            <ContactEditor 
+              section={getSection("contact_info")} 
+              onSave={(content) => updateMutation.mutate({ sectionKey: "contact_info", content: JSON.parse(JSON.stringify(content)) })}
               isSaving={updateMutation.isPending}
             />
           </TabsContent>
@@ -471,6 +480,175 @@ const TimelineEditor = ({
         </div>
       </CardContent>
     </Card>
+  );
+};
+
+interface ContactInfo {
+  address: string;
+  phone: string;
+  phone2: string;
+  email: string;
+  email2: string;
+  schedule: string;
+  facebook: string;
+  instagram: string;
+  twitter: string;
+  youtube: string;
+}
+
+// Contact Editor Component
+const ContactEditor = ({ 
+  section, 
+  onSave, 
+  isSaving 
+}: { 
+  section?: ContentSection; 
+  onSave: (content: ContactInfo) => void;
+  isSaving: boolean;
+}) => {
+  const getContactInfo = (): ContactInfo => {
+    if (section?.content && typeof section.content === 'object') {
+      const content = section.content as Partial<ContactInfo>;
+      return {
+        address: content.address || "",
+        phone: content.phone || "",
+        phone2: content.phone2 || "",
+        email: content.email || "",
+        email2: content.email2 || "",
+        schedule: content.schedule || "",
+        facebook: content.facebook || "",
+        instagram: content.instagram || "",
+        twitter: content.twitter || "",
+        youtube: content.youtube || "",
+      };
+    }
+    return {
+      address: "", phone: "", phone2: "", email: "", email2: "",
+      schedule: "", facebook: "", instagram: "", twitter: "", youtube: ""
+    };
+  };
+
+  const [contact, setContact] = useState<ContactInfo>(getContactInfo);
+
+  const updateField = (field: keyof ContactInfo, value: string) => {
+    setContact(prev => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Información de Contacto</CardTitle>
+          <CardDescription>Datos de contacto que se muestran en el pie de página y página de contacto</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Dirección</label>
+              <Textarea
+                value={contact.address}
+                onChange={(e) => updateField("address", e.target.value)}
+                placeholder="4ta avenida 10-53 zona 9 Ciudad de Guatemala"
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Horario</label>
+              <Input
+                value={contact.schedule}
+                onChange={(e) => updateField("schedule", e.target.value)}
+                placeholder="Lunes a Viernes, 9:00 AM - 4:00 PM"
+              />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Teléfono Principal</label>
+              <Input
+                value={contact.phone}
+                onChange={(e) => updateField("phone", e.target.value)}
+                placeholder="+502 2200-0000"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Teléfono Secundario</label>
+              <Input
+                value={contact.phone2}
+                onChange={(e) => updateField("phone2", e.target.value)}
+                placeholder="+502 2200-0001"
+              />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Email Principal</label>
+              <Input
+                value={contact.email}
+                onChange={(e) => updateField("email", e.target.value)}
+                placeholder="info@refugiodelaninez.org"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Email Secundario</label>
+              <Input
+                value={contact.email2}
+                onChange={(e) => updateField("email2", e.target.value)}
+                placeholder="donaciones@refugiodelaninez.org"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Redes Sociales</CardTitle>
+          <CardDescription>Enlaces a las redes sociales de la organización</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Facebook</label>
+              <Input
+                value={contact.facebook}
+                onChange={(e) => updateField("facebook", e.target.value)}
+                placeholder="https://facebook.com/..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Instagram</label>
+              <Input
+                value={contact.instagram}
+                onChange={(e) => updateField("instagram", e.target.value)}
+                placeholder="https://instagram.com/..."
+              />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">Twitter/X</label>
+              <Input
+                value={contact.twitter}
+                onChange={(e) => updateField("twitter", e.target.value)}
+                placeholder="https://twitter.com/..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">YouTube</label>
+              <Input
+                value={contact.youtube}
+                onChange={(e) => updateField("youtube", e.target.value)}
+                placeholder="https://youtube.com/..."
+              />
+            </div>
+          </div>
+          <Button onClick={() => onSave(contact)} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Guardar Información de Contacto
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
