@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import CountUpStat from "@/components/CountUpStat";
 
 interface StatItem {
   number: string;
@@ -19,7 +20,7 @@ interface Partner {
 
 const defaultStats: StatItem[] = [
   { number: "30+", label: "Años de experiencia" },
-  { number: "50,000+", label: "Niños atendidos" },
+  { number: "50000+", label: "Niños atendidos" },
   { number: "6", label: "Programas activos" },
   { number: "200+", label: "Profesionales" },
 ];
@@ -45,6 +46,13 @@ const programs = [
     title: "Incidencia",
     description: "Políticas públicas para la protección de la niñez.",
   },
+];
+
+// Stock images for the hero and sections
+const heroImages = [
+  "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800&q=80",
+  "https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=800&q=80",
+  "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=800&q=80",
 ];
 
 const Index = () => {
@@ -110,26 +118,36 @@ const Index = () => {
 
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="relative gradient-hope py-20 lg:py-32">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center animate-fade-in">
-            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 text-balance">
+      {/* Hero Section with Background Image */}
+      <section className="relative min-h-[80vh] flex items-center overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={heroImages[0]}
+            alt="Niños felices"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/50" />
+        </div>
+        
+        <div className="container relative z-10">
+          <div className="max-w-2xl animate-fade-in">
+            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 text-balance drop-shadow-lg">
               Protegemos los derechos de la{" "}
-              <span className="text-primary">niñez</span> guatemalteca
+              <span className="text-accent">niñez</span> guatemalteca
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-white/90 mb-8 max-w-xl drop-shadow">
               Desde hace más de 30 años trabajamos por la restitución de derechos 
               de niños, niñas y adolescentes víctimas de violencia y explotación.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg" asChild>
                 <Link to="/donar">
                   <Heart className="w-5 h-5 mr-2" />
                   Donar Ahora
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button size="lg" variant="outline" className="bg-white/10 border-white text-white hover:bg-white/20 backdrop-blur-sm" asChild>
                 <Link to="/quienes-somos">
                   Conoce Nuestra Historia
                   <ArrowRight className="w-5 h-5 ml-2" />
@@ -138,50 +156,88 @@ const Index = () => {
             </div>
           </div>
         </div>
+        
+        {/* Decorative floating images */}
+        <div className="hidden lg:block absolute right-10 top-1/2 -translate-y-1/2 z-10">
+          <div className="relative">
+            <div className="w-64 h-80 rounded-2xl overflow-hidden shadow-2xl transform rotate-3 animate-float">
+              <img
+                src={heroImages[1]}
+                alt="Niños en actividades"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="absolute -bottom-10 -left-16 w-48 h-60 rounded-2xl overflow-hidden shadow-2xl transform -rotate-6 animate-float-delayed">
+              <img
+                src={heroImages[2]}
+                alt="Actividades educativas"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Stats Section */}
+      {/* Stats Section with Count Up Animation */}
       <section className="py-16 bg-primary text-primary-foreground">
         <div className="container">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="font-heading text-4xl md:text-5xl font-bold mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-primary-foreground/80 text-sm md:text-base">
-                  {stat.label}
-                </div>
-              </div>
+              <CountUpStat key={stat.label} number={stat.number} label={stat.label} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Mission Section */}
-      <section className="py-20 bg-card">
+      {/* Mission & Vision Section with Images */}
+      <section className="py-20 bg-card overflow-hidden">
         <div className="container">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Nuestra Misión
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              {missionText}
-            </p>
+          <div className="grid lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Misión</span>
+              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
+                Protección integral para la niñez
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {missionText}
+              </p>
+            </div>
+            <div className="order-1 lg:order-2 relative">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
+                <img
+                  src="https://images.unsplash.com/photo-1594708767771-a7502f3ed4a4?w=800&q=80"
+                  alt="Niños en actividades"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent rounded-2xl flex items-center justify-center shadow-lg">
+                <Heart className="w-12 h-12 text-accent-foreground" />
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Vision Section */}
-      <section className="py-20 bg-card">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Nuestra Visión
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              {visionText}
-            </p>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="relative">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
+                <img
+                  src="https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80"
+                  alt="Futuro brillante"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+                <Users className="w-12 h-12 text-primary-foreground" />
+              </div>
+            </div>
+            <div>
+              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Visión</span>
+              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
+                Un futuro sin violencia
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {visionText}
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -190,7 +246,8 @@ const Index = () => {
       <section className="py-20 bg-muted">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mb-4">
+            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Lo que hacemos</span>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-4">
               Nuestros Programas
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -199,13 +256,14 @@ const Index = () => {
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {programs.map((program) => (
+            {programs.map((program, index) => (
               <div
                 key={program.title}
-                className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                className="bg-card rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <program.icon className="w-6 h-6 text-primary" />
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
+                  <program.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors" />
                 </div>
                 <h3 className="font-heading font-semibold text-lg mb-2">
                   {program.title}
@@ -216,8 +274,8 @@ const Index = () => {
               </div>
             ))}
           </div>
-          <div className="text-center mt-8">
-            <Button variant="outline" asChild>
+          <div className="text-center mt-10">
+            <Button variant="outline" size="lg" asChild>
               <Link to="/programas">
                 Ver Todos los Programas
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -227,28 +285,47 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 gradient-warm text-primary-foreground">
-        <div className="container">
+      {/* CTA Section with Background Image */}
+      <section className="relative py-24 overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <img
+            src="https://images.unsplash.com/photo-1469406396016-013bfae5d83e?w=1200&q=80"
+            alt="Esperanza"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-secondary/95 via-secondary/85 to-secondary/75" />
+        </div>
+        <div className="container relative z-10">
           <div className="max-w-3xl mx-auto text-center">
-            <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-secondary-foreground">
               Tu apoyo transforma vidas
             </h2>
-            <p className="text-lg mb-8 text-primary-foreground/90">
+            <p className="text-lg md:text-xl mb-10 text-secondary-foreground/90 max-w-2xl mx-auto">
               Cada donación nos permite continuar protegiendo a niños, niñas 
               y adolescentes que más lo necesitan. Únete a nuestra causa.
             </p>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="bg-card text-foreground hover:bg-card/90"
-              asChild
-            >
-              <Link to="/donar">
-                <Heart className="w-5 h-5 mr-2" />
-                Hacer una Donación
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                size="lg"
+                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg text-lg px-8"
+                asChild
+              >
+                <Link to="/donar">
+                  <Heart className="w-5 h-5 mr-2" />
+                  Hacer una Donación
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-white/10 border-white text-white hover:bg-white/20 backdrop-blur-sm"
+                asChild
+              >
+                <Link to="/contacto">
+                  Contáctanos
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -256,11 +333,12 @@ const Index = () => {
       {/* Partners Section */}
       <section className="py-16 bg-card">
         <div className="container">
-          <div className="text-center mb-8">
-            <h2 className="font-heading text-2xl font-semibold text-foreground mb-2">
+          <div className="text-center mb-10">
+            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Alianzas</span>
+            <h2 className="font-heading text-2xl md:text-3xl font-semibold text-foreground mt-2 mb-2">
               Socios Cooperantes
             </h2>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground">
               Trabajamos junto a organizaciones comprometidas con la niñez
             </p>
           </div>
@@ -276,12 +354,12 @@ const Index = () => {
                       href={partner.website_url || "#"} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="opacity-70 hover:opacity-100 transition-opacity"
+                      className="opacity-70 hover:opacity-100 transition-opacity duration-300"
                     >
                       <img 
                         src={partner.logo_url} 
                         alt={partner.name}
-                        className="h-12 w-auto object-contain"
+                        className="h-14 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
                       />
                     </a>
                   ) : (
@@ -297,7 +375,6 @@ const Index = () => {
                 </div>
               ))
             ) : (
-              // Fallback partners if none in database
               ["ACNUR", "Plan International", "UNICEF", "Save the Children", "World Vision"].map((name) => (
                 <div
                   key={name}
