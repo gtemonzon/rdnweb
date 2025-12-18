@@ -176,6 +176,135 @@ export type Database = {
         }
         Relationships: []
       }
+      donations: {
+        Row: {
+          amount: number
+          cancelled_at: string | null
+          confirmed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          donation_type: string
+          donor_address: string | null
+          donor_email: string
+          donor_id: string | null
+          donor_name: string
+          donor_nit: string | null
+          donor_phone: string | null
+          id: string
+          notes: string | null
+          payment_method: string
+          receipt_id: string | null
+          source: string | null
+          status: string
+          updated_at: string | null
+          wants_receipt: boolean | null
+        }
+        Insert: {
+          amount: number
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          donation_type?: string
+          donor_address?: string | null
+          donor_email: string
+          donor_id?: string | null
+          donor_name: string
+          donor_nit?: string | null
+          donor_phone?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          receipt_id?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string | null
+          wants_receipt?: boolean | null
+        }
+        Update: {
+          amount?: number
+          cancelled_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          donation_type?: string
+          donor_address?: string | null
+          donor_email?: string
+          donor_id?: string | null
+          donor_name?: string
+          donor_nit?: string | null
+          donor_phone?: string | null
+          id?: string
+          notes?: string | null
+          payment_method?: string
+          receipt_id?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string | null
+          wants_receipt?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donations_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "donation_receipts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donors: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          donation_count: number | null
+          email: string
+          first_donation_at: string | null
+          id: string
+          last_donation_at: string | null
+          name: string
+          nit: string | null
+          phone: string | null
+          total_donated: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          donation_count?: number | null
+          email: string
+          first_donation_at?: string | null
+          id?: string
+          last_donation_at?: string | null
+          name: string
+          nit?: string | null
+          phone?: string | null
+          total_donated?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          donation_count?: number | null
+          email?: string
+          first_donation_at?: string | null
+          id?: string
+          last_donation_at?: string | null
+          name?: string
+          nit?: string | null
+          phone?: string | null
+          total_donated?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       fel_configuration: {
         Row: {
           activo: boolean
