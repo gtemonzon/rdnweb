@@ -549,17 +549,30 @@ const AdminUsers = () => {
                       <TableCell>
                         {u.role === "admin" ? (
                           <span className="text-xs text-muted-foreground">Todos</span>
-                        ) : u.module_permissions.length > 0 ? (
-                          <div className="flex gap-1 flex-wrap">
-                            {u.module_permissions.map(p => (
-                              <span key={p.module_name} className="px-1.5 py-0.5 bg-muted rounded text-xs">
-                                {moduleLabels[p.module_name]}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
-                        )}
+                        ) : (() => {
+                          // Filter modules that have at least one permission active
+                          const activeModules = u.module_permissions.filter(p => 
+                            p.permissions.can_view || 
+                            p.permissions.can_create || 
+                            p.permissions.can_edit_own || 
+                            p.permissions.can_edit_all || 
+                            p.permissions.can_publish || 
+                            p.permissions.can_delete_own || 
+                            p.permissions.can_delete_all
+                          );
+                          
+                          return activeModules.length > 0 ? (
+                            <div className="flex gap-1 flex-wrap">
+                              {activeModules.map(p => (
+                                <span key={p.module_name} className="px-1.5 py-0.5 bg-muted rounded text-xs">
+                                  {moduleLabels[p.module_name]}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Select
