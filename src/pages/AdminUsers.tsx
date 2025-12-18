@@ -579,16 +579,16 @@ const AdminUsers = () => {
                                     ))}
                                   </TabsList>
                                   
-                                  {/* Blog permissions */}
+                                  {/* Blog permissions - with categories */}
                                   <TabsContent value="blog" className="space-y-4">
                                     <div className="space-y-3">
                                       <h4 className="font-medium text-sm">Permisos de Artículos</h4>
                                       
                                       {(['can_view', 'can_create', 'can_edit_own', 'can_edit_all', 'can_publish', 'can_delete_own', 'can_delete_all'] as const).map(perm => (
                                         <div key={perm} className="flex items-center justify-between">
-                                          <Label htmlFor={perm}>{permissionLabels[perm]}</Label>
+                                          <Label htmlFor={`blog-${perm}`}>{permissionLabels[perm]}</Label>
                                           <Switch
-                                            id={perm}
+                                            id={`blog-${perm}`}
                                             checked={permissionsForm[perm]}
                                             onCheckedChange={(checked) => 
                                               setPermissionsForm({...permissionsForm, [perm]: checked})
@@ -619,6 +619,28 @@ const AdminUsers = () => {
                                       </div>
                                     </div>
                                   </TabsContent>
+                                  
+                                  {/* Other available modules - standard permissions */}
+                                  {availableModules.filter(mod => mod !== 'blog').map(mod => (
+                                    <TabsContent key={mod} value={mod} className="space-y-4">
+                                      <div className="space-y-3">
+                                        <h4 className="font-medium text-sm">Permisos de {moduleLabels[mod]}</h4>
+                                        
+                                        {(['can_view', 'can_create', 'can_edit_own', 'can_edit_all', 'can_publish', 'can_delete_own', 'can_delete_all'] as const).map(perm => (
+                                          <div key={perm} className="flex items-center justify-between">
+                                            <Label htmlFor={`${mod}-${perm}`}>{permissionLabels[perm]}</Label>
+                                            <Switch
+                                              id={`${mod}-${perm}`}
+                                              checked={permissionsForm[perm]}
+                                              onCheckedChange={(checked) => 
+                                                setPermissionsForm({...permissionsForm, [perm]: checked})
+                                              }
+                                            />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </TabsContent>
+                                  ))}
                                   
                                   {/* Future modules placeholder */}
                                   {futureModules.map(mod => (
