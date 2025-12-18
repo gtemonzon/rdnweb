@@ -495,7 +495,7 @@ const AdminTransparencia = () => {
                       Nuevo Documento
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg">
+                  <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
                         {editingDoc ? "Editar Documento" : "Nuevo Documento"}
@@ -588,14 +588,22 @@ const AdminTransparencia = () => {
                             }`}
                             onDragOver={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
+                              setIsDragging(true);
+                            }}
+                            onDragEnter={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setIsDragging(true);
                             }}
                             onDragLeave={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               setIsDragging(false);
                             }}
                             onDrop={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               setIsDragging(false);
                               const file = e.dataTransfer.files?.[0];
                               if (file) {
