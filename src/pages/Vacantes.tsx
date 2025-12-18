@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Briefcase, MapPin, Calendar, Clock, FileText, ExternalLink, AlertCircle } from "lucide-react";
 import { format, differenceInDays, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatUtcCalendarDate } from "@/lib/date";
 
 interface JobVacancy {
   id: string;
@@ -185,7 +186,7 @@ const Vacantes = () => {
                         </span>
                         <span className="flex items-center gap-1 text-accent font-medium">
                           <Clock className="w-4 h-4" />
-                          Fecha límite: {format(new Date(vacancy.application_deadline), "d MMM yyyy", { locale: es })}
+                          Fecha límite: {formatUtcCalendarDate(vacancy.application_deadline, "d MMM yyyy", es)}
                         </span>
                       </CardDescription>
                     </CardHeader>
