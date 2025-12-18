@@ -58,9 +58,41 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // 1. Extract and validate Authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.log("Missing authorization header");
+      return new Response(
+        JSON.stringify({ error: "Missing authorization" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    // 2. Create client with user's JWT to respect RLS
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    // 3. Verify user authentication
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    if (authError || !user) {
+      console.log("Authentication failed:", authError?.message);
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log("Authenticated user:", user.id);
 
     // Get Guatefacturas credentials from environment
     const guatefacturasUser = Deno.env.get("GUATEFACTURAS_USER");
@@ -93,8 +125,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch receipt data
-    const { data: receipt, error: receiptError } = await supabase
+    // 4. Fetch receipt data using user's client (RLS will enforce permissions)
+    const { data: receipt, error: receiptError } = await supabaseUser
       .from("donation_receipts")
       .select("*")
       .eq("id", receipt_id)
@@ -103,16 +135,16 @@ const handler = async (req: Request): Promise<Response> => {
     if (receiptError || !receipt) {
       console.error("Error fetching receipt:", receiptError);
       return new Response(
-        JSON.stringify({ error: "Receipt not found" }),
+        JSON.stringify({ error: "Receipt not found or access denied" }),
         {
-          status: 404,
+          status: 403,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
     }
 
-    // Fetch FEL configuration
-    const { data: felConfig, error: configError } = await supabase
+    // 5. Fetch FEL configuration using user's client (RLS enforced)
+    const { data: felConfig, error: configError } = await supabaseUser
       .from("fel_configuration")
       .select("*")
       .eq("activo", true)
