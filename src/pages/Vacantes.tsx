@@ -102,10 +102,11 @@ const Vacantes = () => {
     return `https://${url}`;
   };
 
-  // Proxy PDFs through our own domain to avoid browser extensions blocking the storage domain
+  // Proxy PDFs through edge function to avoid browser extensions blocking the storage domain
   const getPdfProxyUrl = (url: string | null): string | null => {
     if (!url) return null;
-    return `/functions/v1/file-proxy?url=${encodeURIComponent(url)}`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/file-proxy?url=${encodeURIComponent(url)}`;
   };
 
   return (
