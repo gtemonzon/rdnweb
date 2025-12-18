@@ -5,6 +5,7 @@ import Layout from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CountUpStat from "@/components/CountUpStat";
+import PartnersCarousel from "@/components/PartnersCarousel";
 
 interface StatItem {
   number: string;
@@ -329,44 +330,7 @@ const Index = () => {
             </h2>
             <p className="text-muted-foreground">Trabajamos junto a organizaciones comprometidas con la niñez</p>
           </div>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
-            {partners && partners.length > 0
-              ? partners.map((partner) => (
-                  <div key={partner.id} className="flex items-center gap-3">
-                    {partner.logo_url && partner.logo_url !== "/placeholder.svg" ? (
-                      <a
-                        href={partner.website_url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="opacity-70 hover:opacity-100 transition-opacity duration-300"
-                      >
-                        <img
-                          src={partner.logo_url}
-                          alt={partner.name}
-                          className="h-14 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
-                        />
-                      </a>
-                    ) : (
-                      <a
-                        href={partner.website_url || "#"}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
-                      >
-                        {partner.name}
-                      </a>
-                    )}
-                  </div>
-                ))
-              : ["ACNUR", "Plan International", "UNICEF", "Save the Children", "World Vision"].map((name) => (
-                  <div
-                    key={name}
-                    className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
-                  >
-                    {name}
-                  </div>
-                ))}
-          </div>
+          <PartnersCarousel partners={partners || []} />
         </div>
       </section>
     </Layout>
