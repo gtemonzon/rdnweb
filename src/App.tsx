@@ -18,6 +18,7 @@ import AdminPostEditor from "./pages/AdminPostEditor";
 import AdminUsers from "./pages/AdminUsers";
 import AdminContenido from "./pages/AdminContenido";
 import AdminAliados from "./pages/AdminAliados";
+import AdminRecibos from "./pages/AdminRecibos";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="/admin/contenido" element={<AdminContenido />} />
             <Route path="/admin/aliados" element={<AdminAliados />} />
+            <Route path="/admin/recibos" element={<AdminRecibos />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
