@@ -104,6 +104,7 @@ const AdminTransparencia = () => {
   });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const canView = userRole === "admin" || hasPermission("transparency", "can_view");
   const canCreate = userRole === "admin" || hasPermission("transparency", "can_create");
@@ -157,6 +158,55 @@ const AdminTransparencia = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.type !== "application/pdf") {
+      toast({
+        title: "Error",
+        description: "Solo se permiten archivos PDF",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "El archivo no puede superar 10MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const { data, error } = await supabase.storage
+      .from("transparency-docs")
+      .upload(fileName, file);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo subir el archivo",
+        variant: "destructive",
+      });
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("transparency-docs")
+      .getPublicUrl(data.path);
+
+    setFormData({ ...formData, file_url: urlData.publicUrl });
+    setUploading(false);
+
+    toast({
+      title: "Archivo subido",
+      description: "El PDF se ha subido correctamente",
+    });
+  };
+
+  const handleFileDrop = async (file: File) => {
     if (file.type !== "application/pdf") {
       toast({
         title: "Error",
@@ -506,7 +556,27 @@ const AdminTransparencia = () => {
                             </Button>
                           </div>
                         ) : (
-                          <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                          <div 
+                            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                              isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
+                            }`}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              setIsDragging(true);
+                            }}
+                            onDragLeave={(e) => {
+                              e.preventDefault();
+                              setIsDragging(false);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              setIsDragging(false);
+                              const file = e.dataTransfer.files?.[0];
+                              if (file) {
+                                handleFileDrop(file);
+                              }
+                            }}
+                          >
                             <input
                               type="file"
                               accept=".pdf"
@@ -519,9 +589,9 @@ const AdminTransparencia = () => {
                               htmlFor="pdf-upload"
                               className="cursor-pointer flex flex-col items-center gap-2"
                             >
-                              <Upload className="w-8 h-8 text-muted-foreground" />
-                              <span className="text-sm text-muted-foreground">
-                                {uploading ? "Subiendo..." : "Haz clic para subir un PDF"}
+                              <Upload className={`w-8 h-8 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                              <span className={`text-sm ${isDragging ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                                {uploading ? "Subiendo..." : isDragging ? "Suelta el archivo aquí" : "Arrastra un PDF o haz clic para subir"}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 Máximo 10MB
