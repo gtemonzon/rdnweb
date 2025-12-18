@@ -1,5 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
+const MAX_REQUESTS_PER_WINDOW = 5; // 5 requests per hour per IP
 
 // Allowed origins for CORS - restrict to trusted domains
 const allowedOrigins = [
@@ -29,7 +34,70 @@ interface EmailRequest {
   amount?: number;
   donationType?: "unica" | "mensual";
   paymentMethod?: "tarjeta" | "transferencia";
+  honeypot?: string; // Honeypot field for bot detection
 }
+
+// Input validation
+const validateEmailData = (data: EmailRequest): { valid: boolean; error?: string } => {
+  // Check honeypot - if filled, it's likely a bot
+  if (data.honeypot) {
+    console.log("Honeypot triggered - likely bot submission");
+    return { valid: false, error: "Invalid submission" };
+  }
+
+  // Validate required fields
+  if (!data.type || !["contact", "donation"].includes(data.type)) {
+    return { valid: false, error: "Invalid email type" };
+  }
+
+  if (!data.name || data.name.trim().length < 2 || data.name.length > 100) {
+    return { valid: false, error: "Name must be between 2 and 100 characters" };
+  }
+
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!data.email || !emailRegex.test(data.email) || data.email.length > 255) {
+    return { valid: false, error: "Invalid email address" };
+  }
+
+  // Validate phone if provided
+  if (data.phone && (data.phone.length < 8 || data.phone.length > 20)) {
+    return { valid: false, error: "Invalid phone number" };
+  }
+
+  // Type-specific validation
+  if (data.type === "contact") {
+    if (data.message && data.message.length > 5000) {
+      return { valid: false, error: "Message too long (max 5000 characters)" };
+    }
+    if (data.subject && data.subject.length > 200) {
+      return { valid: false, error: "Subject too long (max 200 characters)" };
+    }
+  }
+
+  if (data.type === "donation") {
+    if (!data.amount || data.amount < 1 || data.amount > 1000000) {
+      return { valid: false, error: "Invalid donation amount" };
+    }
+    if (data.donationType && !["unica", "mensual"].includes(data.donationType)) {
+      return { valid: false, error: "Invalid donation type" };
+    }
+    if (data.paymentMethod && !["tarjeta", "transferencia"].includes(data.paymentMethod)) {
+      return { valid: false, error: "Invalid payment method" };
+    }
+  }
+
+  return { valid: true };
+};
+
+// Sanitize input to prevent injection
+const sanitizeString = (str: string): string => {
+  return str
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+};
 
 const handler = async (req: Request): Promise<Response> => {
   const origin = req.headers.get("Origin");
@@ -39,9 +107,92 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Only allow POST requests
+  if (req.method !== "POST") {
+    return new Response(
+      JSON.stringify({ success: false, error: "Method not allowed" }),
+      { status: 405, headers: { "Content-Type": "application/json", ...corsHeaders } }
+    );
+  }
+
   try {
+    // Get client IP for rate limiting
+    const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                     req.headers.get("x-real-ip") || 
+                     "unknown";
+
+    console.log("Processing email request from IP:", clientIp);
+
+    // Initialize Supabase client for rate limiting
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Supabase configuration missing");
+      throw new Error("Server configuration error");
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limit
+    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const { count, error: countError } = await supabase
+      .from("email_rate_limits")
+      .select("*", { count: "exact", head: true })
+      .eq("ip_address", clientIp)
+      .gte("created_at", windowStart);
+
+    if (countError) {
+      console.error("Rate limit check error:", countError);
+      // Continue processing if rate limit check fails - don't block legitimate users
+    } else if (count !== null && count >= MAX_REQUESTS_PER_WINDOW) {
+      console.log("Rate limit exceeded for IP:", clientIp);
+      return new Response(
+        JSON.stringify({ success: false, error: "Demasiadas solicitudes. Por favor intenta más tarde." }),
+        { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     const emailData: EmailRequest = await req.json();
-    console.log("Received email request:", emailData);
+    console.log("Received email request type:", emailData.type);
+
+    // Validate input
+    const validation = validateEmailData(emailData);
+    if (!validation.valid) {
+      console.log("Validation failed:", validation.error);
+      return new Response(
+        JSON.stringify({ success: false, error: validation.error }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Sanitize inputs
+    const sanitizedName = sanitizeString(emailData.name.trim());
+    const sanitizedEmail = emailData.email.trim().toLowerCase();
+    const sanitizedPhone = emailData.phone ? sanitizeString(emailData.phone.trim()) : undefined;
+    const sanitizedSubject = emailData.subject ? sanitizeString(emailData.subject.trim()) : undefined;
+    const sanitizedMessage = emailData.message ? sanitizeString(emailData.message.trim()) : undefined;
+
+    // Record this request for rate limiting
+    const { error: insertError } = await supabase
+      .from("email_rate_limits")
+      .insert({
+        ip_address: clientIp,
+        email_type: emailData.type,
+      });
+
+    if (insertError) {
+      console.error("Failed to record rate limit:", insertError);
+      // Continue processing - don't block legitimate users
+    }
+
+    // Cleanup old rate limit entries periodically (1% chance per request)
+    if (Math.random() < 0.01) {
+      const { error: cleanupError } = await supabase.rpc("cleanup_old_rate_limits");
+      if (cleanupError) {
+        console.log("Cleanup function error (non-critical):", cleanupError);
+      }
+    }
 
     const smtpHost = Deno.env.get("SMTP_HOST");
     const smtpPort = Deno.env.get("SMTP_PORT");
@@ -71,18 +222,18 @@ const handler = async (req: Request): Promise<Response> => {
       await client.send({
         from: smtpUsername,
         to: smtpUsername,
-        subject: `Nuevo mensaje de contacto: ${emailData.subject || "Sin asunto"}`,
+        subject: `Nuevo mensaje de contacto: ${sanitizedSubject || "Sin asunto"}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #F68A33;">Nuevo mensaje de contacto</h2>
             <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-              <p><strong>Nombre:</strong> ${emailData.name}</p>
-              <p><strong>Correo:</strong> ${emailData.email}</p>
-              ${emailData.phone ? `<p><strong>Teléfono:</strong> ${emailData.phone}</p>` : ""}
-              <p><strong>Asunto:</strong> ${emailData.subject || "No especificado"}</p>
+              <p><strong>Nombre:</strong> ${sanitizedName}</p>
+              <p><strong>Correo:</strong> ${sanitizedEmail}</p>
+              ${sanitizedPhone ? `<p><strong>Teléfono:</strong> ${sanitizedPhone}</p>` : ""}
+              <p><strong>Asunto:</strong> ${sanitizedSubject || "No especificado"}</p>
               <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
               <p><strong>Mensaje:</strong></p>
-              <p style="white-space: pre-wrap;">${emailData.message}</p>
+              <p style="white-space: pre-wrap;">${sanitizedMessage || ""}</p>
             </div>
           </div>
         `,
@@ -91,12 +242,12 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Sending confirmation to user...");
       await client.send({
         from: smtpUsername,
-        to: emailData.email,
+        to: sanitizedEmail,
         subject: "Hemos recibido tu mensaje - El Refugio de la Niñez",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #0067B1;">¡Gracias por contactarnos!</h2>
-            <p>Hola ${emailData.name},</p>
+            <p>Hola ${sanitizedName},</p>
             <p>Hemos recibido tu mensaje y nos pondremos en contacto contigo lo antes posible.</p>
             <p>Atentamente,<br><strong>El Refugio de la Niñez</strong></p>
           </div>
@@ -115,9 +266,9 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #F68A33;">Nueva intención de donación</h2>
             <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
-              <p><strong>Nombre:</strong> ${emailData.name}</p>
-              <p><strong>Correo:</strong> ${emailData.email}</p>
-              ${emailData.phone ? `<p><strong>Teléfono:</strong> ${emailData.phone}</p>` : ""}
+              <p><strong>Nombre:</strong> ${sanitizedName}</p>
+              <p><strong>Correo:</strong> ${sanitizedEmail}</p>
+              ${sanitizedPhone ? `<p><strong>Teléfono:</strong> ${sanitizedPhone}</p>` : ""}
               <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
               <p><strong>Monto:</strong> Q${emailData.amount}</p>
               <p><strong>Tipo:</strong> ${donationTypeText}</p>
@@ -130,12 +281,12 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Sending confirmation to donor...");
       await client.send({
         from: smtpUsername,
-        to: emailData.email,
+        to: sanitizedEmail,
         subject: "Gracias por tu donación - El Refugio de la Niñez",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #0067B1;">¡Gracias por tu generosidad!</h2>
-            <p>Hola ${emailData.name},</p>
+            <p>Hola ${sanitizedName},</p>
             <p>Hemos recibido tu intención de donar. Tu apoyo nos permite continuar protegiendo a niños, niñas y adolescentes.</p>
             <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <p><strong>Monto:</strong> Q${emailData.amount}</p>
@@ -165,8 +316,9 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error: any) {
     console.error("Error in send-email function:", error);
+    // Return generic error message to avoid leaking internal details
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Error al procesar la solicitud. Por favor intenta más tarde." }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

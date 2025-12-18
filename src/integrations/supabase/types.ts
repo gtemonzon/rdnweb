@@ -305,6 +305,27 @@ export type Database = {
         }
         Relationships: []
       }
+      email_rate_limits: {
+        Row: {
+          created_at: string
+          email_type: string
+          id: string
+          ip_address: string
+        }
+        Insert: {
+          created_at?: string
+          email_type: string
+          id?: string
+          ip_address: string
+        }
+        Update: {
+          created_at?: string
+          email_type?: string
+          id?: string
+          ip_address?: string
+        }
+        Relationships: []
+      }
       fel_configuration: {
         Row: {
           activo: boolean
@@ -541,6 +562,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       has_blog_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
