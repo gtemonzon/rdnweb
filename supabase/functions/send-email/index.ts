@@ -1,9 +1,22 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Allowed origins for CORS - restrict to trusted domains
+const allowedOrigins = [
+  Deno.env.get("ALLOWED_ORIGIN") || "",
+  "https://kfskqhgziuzowfoemqbg.lovable.app",
+  "http://localhost:5173",
+  "http://localhost:8080",
+].filter(Boolean);
+
+const getCorsHeaders = (origin: string | null): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+  if (origin && allowedOrigins.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
 };
 
 interface EmailRequest {
@@ -19,6 +32,9 @@ interface EmailRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -42,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
       connection: {
         hostname: smtpHost,
         port: parseInt(smtpPort),
-        tls: false, // Start without TLS, let STARTTLS upgrade
+        tls: false,
         auth: {
           username: smtpUsername,
           password: smtpPassword,
@@ -51,7 +67,6 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (emailData.type === "contact") {
-      // Send to organization
       console.log("Sending contact email to organization...");
       await client.send({
         from: smtpUsername,
@@ -73,7 +88,6 @@ const handler = async (req: Request): Promise<Response> => {
         `,
       });
 
-      // Send confirmation to user
       console.log("Sending confirmation to user...");
       await client.send({
         from: smtpUsername,
@@ -92,7 +106,6 @@ const handler = async (req: Request): Promise<Response> => {
       const donationTypeText = emailData.donationType === "mensual" ? "Mensual" : "Única";
       const paymentMethodText = emailData.paymentMethod === "tarjeta" ? "Tarjeta" : "Transferencia bancaria";
 
-      // Send to organization
       console.log("Sending donation email to organization...");
       await client.send({
         from: smtpUsername,
@@ -114,7 +127,6 @@ const handler = async (req: Request): Promise<Response> => {
         `,
       });
 
-      // Send confirmation to donor
       console.log("Sending confirmation to donor...");
       await client.send({
         from: smtpUsername,
