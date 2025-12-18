@@ -566,24 +566,22 @@ const AdminUsers = () => {
                                 </DialogHeader>
                                 
                                 <Tabs value={activeModule} onValueChange={(v) => handleModuleChange(v as ModuleName)}>
-                                  <TabsList className="grid grid-cols-3 mb-4">
+                                  <TabsList className="flex flex-wrap h-auto gap-1 mb-4">
                                     {availableModules.map(mod => (
-                                      <TabsTrigger key={mod} value={mod}>
+                                      <TabsTrigger key={mod} value={mod} className="text-xs px-3 py-1.5">
                                         {moduleLabels[mod]}
                                       </TabsTrigger>
                                     ))}
-                                    {futureModules.slice(0, 2).map(mod => (
-                                      <TabsTrigger key={mod} value={mod} disabled className="opacity-50">
+                                    {futureModules.map(mod => (
+                                      <TabsTrigger key={mod} value={mod} disabled className="opacity-50 text-xs px-3 py-1.5">
                                         {moduleLabels[mod]}
                                       </TabsTrigger>
                                     ))}
                                   </TabsList>
                                   
                                   {/* Blog permissions - with categories */}
-                                  <TabsContent value="blog" className="space-y-4">
+                                  <TabsContent value="blog" className="space-y-4 mt-2">
                                     <div className="space-y-3">
-                                      <h4 className="font-medium text-sm">Permisos de Artículos</h4>
-                                      
                                       {(['can_view', 'can_create', 'can_edit_own', 'can_edit_all', 'can_publish', 'can_delete_own', 'can_delete_all'] as const).map(perm => (
                                         <div key={perm} className="flex items-center justify-between">
                                           <Label htmlFor={`blog-${perm}`}>{permissionLabels[perm]}</Label>
@@ -622,10 +620,8 @@ const AdminUsers = () => {
                                   
                                   {/* Other available modules - standard permissions */}
                                   {availableModules.filter(mod => mod !== 'blog').map(mod => (
-                                    <TabsContent key={mod} value={mod} className="space-y-4">
+                                    <TabsContent key={mod} value={mod} className="space-y-4 mt-2">
                                       <div className="space-y-3">
-                                        <h4 className="font-medium text-sm">Permisos de {moduleLabels[mod]}</h4>
-                                        
                                         {(['can_view', 'can_create', 'can_edit_own', 'can_edit_all', 'can_publish', 'can_delete_own', 'can_delete_all'] as const).map(perm => (
                                           <div key={perm} className="flex items-center justify-between">
                                             <Label htmlFor={`${mod}-${perm}`}>{permissionLabels[perm]}</Label>
