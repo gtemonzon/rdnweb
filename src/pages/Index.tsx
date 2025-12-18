@@ -172,17 +172,6 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Decorative floating images */}
-        <div className="hidden lg:block absolute right-10 top-1/2 -translate-y-1/2 z-10">
-          <div className="relative">
-            <div className="w-64 h-80 rounded-2xl overflow-hidden shadow-2xl transform rotate-3 animate-float">
-              <img src={heroImages[1]} alt="Niños en actividades" className="w-full h-full object-cover" />
-            </div>
-            <div className="absolute -bottom-10 -left-16 w-48 h-60 rounded-2xl overflow-hidden shadow-2xl transform -rotate-6 animate-float-delayed">
-              <img src={heroImages[2]} alt="Actividades educativas" className="w-full h-full object-cover" />
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Stats Section with Count Up Animation */}
