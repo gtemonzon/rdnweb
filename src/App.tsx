@@ -21,6 +21,8 @@ import AdminAliados from "./pages/AdminAliados";
 import AdminRecibos from "./pages/AdminRecibos";
 import AdminDonaciones from "./pages/AdminDonaciones";
 import AdminTransparencia from "./pages/AdminTransparencia";
+import Vacantes from "./pages/Vacantes";
+import AdminVacantes from "./pages/AdminVacantes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +41,7 @@ const App = () => (
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="/transparencia" element={<Transparencia />} />
+            <Route path="/vacantes" element={<Vacantes />} />
             <Route path="/contacto" element={<Contacto />} />
             <Route path="/donar" element={<Donar />} />
             <Route path="/auth" element={<Auth />} />
@@ -51,6 +54,7 @@ const App = () => (
             <Route path="/admin/recibos" element={<AdminRecibos />} />
             <Route path="/admin/donaciones" element={<AdminDonaciones />} />
             <Route path="/admin/transparencia" element={<AdminTransparencia />} />
+            <Route path="/admin/vacantes" element={<AdminVacantes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

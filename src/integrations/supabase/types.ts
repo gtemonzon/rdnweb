@@ -380,6 +380,57 @@ export type Database = {
         }
         Relationships: []
       }
+      job_vacancies: {
+        Row: {
+          application_deadline: string
+          application_url: string | null
+          contract_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          location: string
+          pdf_url: string | null
+          published_at: string
+          temporality: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          application_deadline: string
+          application_url?: string | null
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string
+          pdf_url?: string | null
+          published_at?: string
+          temporality?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          application_deadline?: string
+          application_url?: string | null
+          contract_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string
+          pdf_url?: string | null
+          published_at?: string
+          temporality?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       module_permissions: {
         Row: {
           can_create: boolean
@@ -676,6 +727,7 @@ export type Database = {
         | "partners"
         | "receipts"
         | "transparency"
+        | "vacancies"
       app_role: "admin" | "editor"
     }
     CompositeTypes: {
@@ -813,6 +865,7 @@ export const Constants = {
         "partners",
         "receipts",
         "transparency",
+        "vacancies",
       ],
       app_role: ["admin", "editor"],
     },
