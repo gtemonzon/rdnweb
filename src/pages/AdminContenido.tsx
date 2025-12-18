@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
@@ -167,12 +167,13 @@ const StatsEditor = ({
   onSave: (content: StatItem[]) => void;
   isSaving: boolean;
 }) => {
-  const [stats, setStats] = useState<StatItem[]>(() => {
+  const [stats, setStats] = useState<StatItem[]>([{ number: "", label: "" }]);
+
+  useEffect(() => {
     if (section?.content && Array.isArray(section.content)) {
-      return section.content as StatItem[];
+      setStats(section.content as StatItem[]);
     }
-    return [{ number: "", label: "" }];
-  });
+  }, [section]);
 
   const addStat = () => setStats([...stats, { number: "", label: "" }]);
   const removeStat = (index: number) => setStats(stats.filter((_, i) => i !== index));
@@ -258,10 +259,22 @@ const MissionVisionEditor = ({
     return { text: "", image_url: "" };
   };
 
-  const [mission, setMission] = useState(getMissionContent().text);
-  const [missionImage, setMissionImage] = useState(getMissionContent().image_url);
-  const [vision, setVision] = useState(getVisionContent().text);
-  const [visionImage, setVisionImage] = useState(getVisionContent().image_url);
+  const [mission, setMission] = useState("");
+  const [missionImage, setMissionImage] = useState("");
+  const [vision, setVision] = useState("");
+  const [visionImage, setVisionImage] = useState("");
+
+  useEffect(() => {
+    const content = getMissionContent();
+    setMission(content.text);
+    setMissionImage(content.image_url);
+  }, [missionSection]);
+
+  useEffect(() => {
+    const content = getVisionContent();
+    setVision(content.text);
+    setVisionImage(content.image_url);
+  }, [visionSection]);
 
   return (
     <div className="space-y-6">
@@ -342,12 +355,13 @@ const ValuesEditor = ({
   onSave: (content: ValueItem[]) => void;
   isSaving: boolean;
 }) => {
-  const [values, setValues] = useState<ValueItem[]>(() => {
+  const [values, setValues] = useState<ValueItem[]>([{ icon: "Heart", title: "", description: "" }]);
+
+  useEffect(() => {
     if (section?.content && Array.isArray(section.content)) {
-      return section.content as ValueItem[];
+      setValues(section.content as ValueItem[]);
     }
-    return [{ icon: "Heart", title: "", description: "" }];
-  });
+  }, [section]);
 
   const iconOptions = ["Heart", "Shield", "Users", "Star", "Award", "Target", "Eye", "BookOpen"];
 
@@ -420,12 +434,13 @@ const TimelineEditor = ({
   onSave: (content: TimelineItem[]) => void;
   isSaving: boolean;
 }) => {
-  const [timeline, setTimeline] = useState<TimelineItem[]>(() => {
+  const [timeline, setTimeline] = useState<TimelineItem[]>([{ year: "", title: "", description: "" }]);
+
+  useEffect(() => {
     if (section?.content && Array.isArray(section.content)) {
-      return section.content as TimelineItem[];
+      setTimeline(section.content as TimelineItem[]);
     }
-    return [{ year: "", title: "", description: "" }];
-  });
+  }, [section]);
 
   const addItem = () => setTimeline([...timeline, { year: "", title: "", description: "" }]);
   const removeItem = (index: number) => setTimeline(timeline.filter((_, i) => i !== index));
@@ -529,6 +544,10 @@ const ContactEditor = ({
   };
 
   const [contact, setContact] = useState<ContactInfo>(getContactInfo);
+
+  useEffect(() => {
+    setContact(getContactInfo());
+  }, [section]);
 
   const updateField = (field: keyof ContactInfo, value: string) => {
     setContact(prev => ({ ...prev, [field]: value }));
