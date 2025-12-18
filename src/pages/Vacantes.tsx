@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, MapPin, Calendar, Clock, FileText, ExternalLink, AlertCircle } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface JobVacancy {
@@ -33,11 +33,14 @@ const Vacantes = () => {
   const fetchVacancies = async () => {
     setLoading(true);
     
+    // Use start of today to include vacancies that expire today
+    const todayStart = startOfDay(new Date()).toISOString();
+    
     const { data, error } = await supabase
       .from("job_vacancies")
       .select("*")
       .eq("is_active", true)
-      .gte("application_deadline", new Date().toISOString())
+      .gte("application_deadline", todayStart)
       .order("application_deadline", { ascending: true });
 
     if (error) {
@@ -50,17 +53,23 @@ const Vacantes = () => {
   };
 
   const getDaysRemaining = (deadline: string) => {
-    const days = differenceInDays(new Date(deadline), new Date());
+    // Compare end of deadline day with start of today
+    const deadlineEnd = endOfDay(new Date(deadline));
+    const todayStart = startOfDay(new Date());
+    const days = differenceInDays(deadlineEnd, todayStart);
     return days;
   };
 
   const getDeadlineBadge = (deadline: string) => {
     const days = getDaysRemaining(deadline);
     
-    if (days <= 0) {
+    // days < 0 means the deadline has fully passed
+    if (days < 0) {
       return <Badge variant="destructive">Vencida</Badge>;
+    } else if (days === 0) {
+      return <Badge variant="destructive">¡Último día!</Badge>;
     } else if (days <= 3) {
-      return <Badge variant="destructive">¡Último día{days > 1 ? `s (${days})` : ""}!</Badge>;
+      return <Badge variant="destructive">¡Quedan {days} día{days > 1 ? "s" : ""}!</Badge>;
     } else if (days <= 7) {
       return <Badge className="bg-amber-500 hover:bg-amber-600">Próxima a vencer ({days} días)</Badge>;
     }
