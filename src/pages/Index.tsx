@@ -131,9 +131,13 @@ const Index = () => {
     <Layout>
       {/* Hero Section with Background Image */}
       <section className="relative min-h-[80vh] flex items-center overflow-hidden">
-        {/* Background Image */}
+        {/* Background GIF with blur effect */}
         <div className="absolute inset-0 z-0">
-          <img src={heroImages[0]} alt="Niños felices" className="w-full h-full object-cover" />
+          <img 
+            src="/images/hero-kids.gif" 
+            alt="Niños felices" 
+            className="w-full h-full object-cover blur-sm scale-105" 
+          />
           <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/50" />
         </div>
 
