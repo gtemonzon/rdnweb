@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CountUpStat from "@/components/CountUpStat";
 import misionImage from "@/assets/mision-refugio.png";
+import visionImage from "@/assets/vision-refugio.png";
 interface StatItem {
   number: string;
   label: string;
@@ -116,7 +117,7 @@ const Index = () => {
   const missionText = missionData?.text || "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
   const missionImageUrl = missionData?.image_url || misionImage;
   const visionText = visionData?.text || "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
-  const visionImageUrl = visionData?.image_url || "https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80";
+  const visionImageUrl = visionData?.image_url || visionImage;
 
   return (
     <Layout>
@@ -225,30 +226,35 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Vision Section */}
-      <section className="py-20 bg-card overflow-hidden">
-        <div className="container">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
-                <img
-                  src={visionImageUrl}
-                  alt="Futuro brillante"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                />
+      {/* Vision Section with Parallax Background */}
+      <section className="relative min-h-[70vh] flex items-center overflow-hidden">
+        {/* Parallax Background */}
+        <div 
+          className="absolute inset-0 z-0 bg-fixed bg-center bg-cover"
+          style={{ backgroundImage: `url(${visionImageUrl})` }}
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-l from-secondary/90 via-secondary/80 to-secondary/70" />
+        
+        <div className="container relative z-10 py-20">
+          <div className="max-w-2xl ml-auto text-right">
+            <span className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full text-secondary-foreground/90 font-semibold text-sm uppercase tracking-wider mb-4">
+              Nuestra Visión
+            </span>
+            <h2 className="font-heading text-3xl md:text-5xl font-bold text-secondary-foreground mt-2 mb-6 drop-shadow-lg">
+              Un futuro sin violencia
+            </h2>
+            <p className="text-lg md:text-xl text-secondary-foreground/90 leading-relaxed drop-shadow">
+              {visionText}
+            </p>
+            <div className="mt-8 flex items-center gap-4 justify-end">
+              <div className="text-secondary-foreground text-right">
+                <p className="font-semibold text-lg">Guatemala</p>
+                <p className="text-secondary-foreground/80">un futuro seguro para nuestra niñez</p>
               </div>
-              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
-                <Users className="w-12 h-12 text-primary-foreground" />
+              <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+                <Users className="w-8 h-8 text-primary-foreground" />
               </div>
-            </div>
-            <div>
-              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Visión</span>
-              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
-                Un futuro sin violencia
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                {visionText}
-              </p>
             </div>
           </div>
         </div>
