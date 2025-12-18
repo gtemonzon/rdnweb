@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Layout from "@/components/layout/Layout";
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, Users, FileText, Handshake, Receipt, Heart, Scale } from "lucide-react";
+import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, Users, FileText, Handshake, Receipt, Heart, Scale, Briefcase } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -235,6 +235,12 @@ const Admin = () => {
                     <Link to="/admin/transparencia">
                       <Scale className="w-4 h-4 mr-2" />
                       Transparencia
+                    </Link>
+                  </Button>
+                  <Button asChild variant="secondary">
+                    <Link to="/admin/vacantes">
+                      <Briefcase className="w-4 h-4 mr-2" />
+                      Vacantes
                     </Link>
                   </Button>
                   <Button asChild variant="secondary">
