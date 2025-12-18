@@ -1,21 +1,26 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Allowed origins for CORS - restrict to trusted domains
+const allowedOrigins = [
+  Deno.env.get("ALLOWED_ORIGIN") || "",
+  "https://kfskqhgziuzowfoemqbg.lovable.app",
+  "http://localhost:5173",
+  "http://localhost:8080",
+].filter(Boolean);
+
+const getCorsHeaders = (origin: string | null): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+  if (origin && allowedOrigins.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
 };
 
 interface EmitReceiptRequest {
   receipt_id: string;
-}
-
-interface GuatefacturasCredentials {
-  user: string;
-  password: string;
-  nit_emisor: string;
-  token: string;
-  ambiente: string; // "FEL" or "PRUEBAS"
 }
 
 interface ReceiptData {
@@ -44,6 +49,9 @@ interface FELConfiguration {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get("Origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -125,68 +133,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Build XML for Guatefacturas
-    // This is a template - actual implementation depends on Guatefacturas API documentation
     const xml = buildFELXml(receipt as ReceiptData, felConfig as FELConfiguration);
 
     console.log("Generated XML for FEL:", xml.substring(0, 500) + "...");
-
-    // TODO: Call Guatefacturas Web Service
-    // The actual implementation will depend on the specific Guatefacturas API
-    // For now, we'll simulate the response structure
-
-    /*
-    const guatefacturasResponse = await fetch("https://api.guatefacturas.com/fel/certificar", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/xml",
-        "Authorization": `Bearer ${guatefacturasToken}`,
-        "X-User": guatefacturasUser,
-        "X-Password": guatefacturasPassword,
-      },
-      body: xml,
-    });
-
-    const responseData = await guatefacturasResponse.json();
-
-    if (!guatefacturasResponse.ok) {
-      // Update receipt with error
-      await supabase
-        .from("donation_receipts")
-        .update({
-          status: "error",
-          error_message: responseData.message || "Error al certificar con Guatefacturas",
-        })
-        .eq("id", receipt_id);
-
-      return new Response(
-        JSON.stringify({ error: "FEL certification failed", details: responseData }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
-
-    // Update receipt with success data
-    await supabase
-      .from("donation_receipts")
-      .update({
-        status: "certified",
-        uuid_sat: responseData.uuid,
-        serie: responseData.serie,
-        numero: responseData.numero,
-        pdf_url: responseData.pdf_url,
-        xml_url: responseData.xml_url,
-        certified_at: new Date().toISOString(),
-        error_message: null,
-      })
-      .eq("id", receipt_id);
-
-    // Send email with PDF to receptor and copy email
-    if (receipt.receptor_correo || felConfig.correo_copia) {
-      // TODO: Implement email sending with PDF attachment
-    }
-    */
 
     // For now, return a placeholder response indicating the function is ready
     return new Response(
@@ -214,15 +163,9 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 function buildFELXml(receipt: ReceiptData, config: FELConfiguration): string {
-  // Determine document type based on receipt_type
-  // RDON = Recibo por Donación
-  // RECI = Recibo
   const tipoDocumento = receipt.receipt_type === "donacion" ? "RDON" : "RECI";
-  
   const fechaEmision = new Date().toISOString();
   
-  // Build XML according to SAT Guatemala FEL format
-  // This is a simplified template - actual XML structure must match SAT specifications
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <dte:GTDocumento xmlns:dte="http://www.sat.gob.gt/dte/fel/0.2.0" Version="0.1">
   <dte:SAT ClaseDocumento="dte">
