@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Save, Plus, Trash2, Loader2 } from "lucide-react";
+import ImageUpload from "@/components/ImageUpload";
 
 interface StatItem {
   number: string;
@@ -281,7 +282,7 @@ const MissionVisionEditor = ({
       <Card>
         <CardHeader>
           <CardTitle>Misión</CardTitle>
-          <CardDescription>El propósito fundamental de la organización</CardDescription>
+          <CardDescription>El propósito fundamental de la organización. La imagen se mostrará como fondo con efecto parallax.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
@@ -291,17 +292,13 @@ const MissionVisionEditor = ({
             placeholder="Escribe la misión de la organización..."
           />
           <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">URL de Imagen</label>
-            <Input
+            <label className="text-sm font-medium text-foreground mb-2 block">Imagen de Fondo (Parallax)</label>
+            <ImageUpload
               value={missionImage}
-              onChange={(e) => setMissionImage(e.target.value)}
-              placeholder="https://ejemplo.com/imagen-mision.jpg"
+              onChange={setMissionImage}
+              folder="mission"
+              aspectRatio="wide"
             />
-            {missionImage && (
-              <div className="mt-3 rounded-lg overflow-hidden max-w-xs">
-                <img src={missionImage} alt="Vista previa" className="w-full h-32 object-cover" />
-              </div>
-            )}
           </div>
           <Button onClick={() => onSaveMission({ text: mission, image_url: missionImage })} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -323,17 +320,13 @@ const MissionVisionEditor = ({
             placeholder="Escribe la visión de la organización..."
           />
           <div>
-            <label className="text-sm font-medium text-foreground mb-2 block">URL de Imagen</label>
-            <Input
+            <label className="text-sm font-medium text-foreground mb-2 block">Imagen</label>
+            <ImageUpload
               value={visionImage}
-              onChange={(e) => setVisionImage(e.target.value)}
-              placeholder="https://ejemplo.com/imagen-vision.jpg"
+              onChange={setVisionImage}
+              folder="vision"
+              aspectRatio="video"
             />
-            {visionImage && (
-              <div className="mt-3 rounded-lg overflow-hidden max-w-xs">
-                <img src={visionImage} alt="Vista previa" className="w-full h-32 object-cover" />
-              </div>
-            )}
           </div>
           <Button onClick={() => onSaveVision({ text: vision, image_url: visionImage })} disabled={isSaving}>
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}

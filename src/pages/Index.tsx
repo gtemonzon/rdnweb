@@ -5,7 +5,7 @@ import Layout from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CountUpStat from "@/components/CountUpStat";
-
+import misionImage from "@/assets/mision-refugio.png";
 interface StatItem {
   number: string;
   label: string;
@@ -114,9 +114,9 @@ const Index = () => {
 
   const stats = statsData || defaultStats;
   const missionText = missionData?.text || "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
-  const missionImage = missionData?.image_url || "https://images.unsplash.com/photo-1594708767771-a7502f3ed4a4?w=800&q=80";
+  const missionImageUrl = missionData?.image_url || misionImage;
   const visionText = visionData?.text || "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
-  const visionImage = visionData?.image_url || "https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80";
+  const visionImageUrl = visionData?.image_url || "https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80";
 
   return (
     <Layout>
@@ -191,38 +191,48 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Mission & Vision Section with Images */}
-      <section className="py-20 bg-card overflow-hidden">
-        <div className="container">
-          <div className="grid lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="order-2 lg:order-1">
-              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Misión</span>
-              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
-                Protección integral para la niñez
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                {missionText}
-              </p>
-            </div>
-            <div className="order-1 lg:order-2 relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
-                <img
-                  src={missionImage}
-                  alt="Niños en actividades"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                />
+      {/* Mission Section with Parallax Background */}
+      <section className="relative min-h-[70vh] flex items-center overflow-hidden">
+        {/* Parallax Background */}
+        <div 
+          className="absolute inset-0 z-0 bg-fixed bg-center bg-cover"
+          style={{ backgroundImage: `url(${missionImageUrl})` }}
+        />
+        {/* Overlay */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-r from-primary/90 via-primary/80 to-primary/70" />
+        
+        <div className="container relative z-10 py-20">
+          <div className="max-w-2xl">
+            <span className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white/90 font-semibold text-sm uppercase tracking-wider mb-4">
+              Nuestra Misión
+            </span>
+            <h2 className="font-heading text-3xl md:text-5xl font-bold text-white mt-2 mb-6 drop-shadow-lg">
+              Protección integral para la niñez
+            </h2>
+            <p className="text-lg md:text-xl text-white/90 leading-relaxed drop-shadow">
+              {missionText}
+            </p>
+            <div className="mt-8 flex items-center gap-4">
+              <div className="w-16 h-16 bg-accent rounded-xl flex items-center justify-center shadow-lg">
+                <Heart className="w-8 h-8 text-accent-foreground" />
               </div>
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent rounded-2xl flex items-center justify-center shadow-lg">
-                <Heart className="w-12 h-12 text-accent-foreground" />
+              <div className="text-white">
+                <p className="font-semibold text-lg">Más de 30 años</p>
+                <p className="text-white/80">protegiendo a la niñez guatemalteca</p>
               </div>
             </div>
           </div>
+        </div>
+      </section>
 
+      {/* Vision Section */}
+      <section className="py-20 bg-card overflow-hidden">
+        <div className="container">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="relative">
               <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
                 <img
-                  src={visionImage}
+                  src={visionImageUrl}
                   alt="Futuro brillante"
                   className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                 />
