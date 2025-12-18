@@ -95,11 +95,17 @@ const Vacantes = () => {
   const ensureExternalUrl = (url: string | null): string | null => {
     if (!url) return null;
     // If it already has a protocol, return as-is
-    if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
       return url;
     }
     // Add https:// if missing
     return `https://${url}`;
+  };
+
+  // Proxy PDFs through our own domain to avoid browser extensions blocking the storage domain
+  const getPdfProxyUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    return `/functions/v1/file-proxy?url=${encodeURIComponent(url)}`;
   };
 
   return (
@@ -181,9 +187,9 @@ const Vacantes = () => {
                       )}
                       
                       <div className="flex flex-wrap gap-3">
-                        {vacancy.pdf_url && (
+                        {vacancy.pdf_url && getPdfProxyUrl(vacancy.pdf_url) && (
                           <Button variant="outline" asChild>
-                            <a href={vacancy.pdf_url} target="_blank" rel="noopener noreferrer">
+                            <a href={getPdfProxyUrl(vacancy.pdf_url)!} target="_blank" rel="noopener noreferrer">
                               <FileText className="w-4 h-4 mr-2" />
                               Ver detalles (PDF)
                             </a>
