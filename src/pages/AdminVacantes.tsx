@@ -50,6 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { format, differenceInDays, isPast } from "date-fns";
 import { es } from "date-fns/locale";
+import { formatUtcCalendarDate, isoToUtcDateInputValue } from "@/lib/date";
 
 interface JobVacancy {
   id: string;
@@ -353,7 +354,7 @@ const AdminVacantes = () => {
       location: vacancy.location,
       application_url: vacancy.application_url || "",
       pdf_url: vacancy.pdf_url || "",
-      application_deadline: vacancy.application_deadline.split("T")[0],
+      application_deadline: isoToUtcDateInputValue(vacancy.application_deadline),
     });
     setDialogOpen(true);
   };
@@ -729,11 +730,7 @@ const AdminVacantes = () => {
                       <TableCell>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                          {format(
-                            new Date(vacancy.application_deadline),
-                            "d MMM yyyy",
-                            { locale: es }
-                          )}
+                          {formatUtcCalendarDate(vacancy.application_deadline, "d MMM yyyy", es)}
                         </span>
                       </TableCell>
                       <TableCell>{getStatusBadge(vacancy)}</TableCell>
