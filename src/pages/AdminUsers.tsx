@@ -96,6 +96,7 @@ const AdminUsers = () => {
   const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
   const [activeModule, setActiveModule] = useState<ModuleName>('blog');
   const [permissionsForm, setPermissionsForm] = useState<ModulePermissions>(defaultBlogPermissions);
+  const [pendingChanges, setPendingChanges] = useState<Map<ModuleName, ModulePermissions>>(new Map());
   const [savingPermissions, setSavingPermissions] = useState(false);
 
   useEffect(() => {
@@ -274,15 +275,29 @@ const AdminUsers = () => {
   const openPermissionsDialog = (userWithRole: UserWithRole) => {
     setEditingUser(userWithRole);
     setActiveModule('blog');
+    setPendingChanges(new Map());
     const blogPerms = userWithRole.module_permissions.find(p => p.module_name === 'blog');
     setPermissionsForm(blogPerms?.permissions || defaultBlogPermissions);
   };
 
   const handleModuleChange = (module: ModuleName) => {
     if (!editingUser) return;
+    
+    // Save current form state to pending changes before switching
+    const newChanges = new Map(pendingChanges);
+    newChanges.set(activeModule, { ...permissionsForm });
+    setPendingChanges(newChanges);
+    
     setActiveModule(module);
-    const modulePerms = editingUser.module_permissions.find(p => p.module_name === module);
-    setPermissionsForm(modulePerms?.permissions || defaultModulePermissions);
+    
+    // Check if we have pending changes for this module, otherwise load from DB
+    const pendingPerms = newChanges.get(module);
+    if (pendingPerms) {
+      setPermissionsForm(pendingPerms);
+    } else {
+      const modulePerms = editingUser.module_permissions.find(p => p.module_name === module);
+      setPermissionsForm(modulePerms?.permissions || defaultModulePermissions);
+    }
   };
 
   const savePermissions = async () => {
@@ -290,63 +305,79 @@ const AdminUsers = () => {
     
     setSavingPermissions(true);
 
-    const existingPerm = editingUser.module_permissions.find(p => p.module_name === activeModule);
+    // Include current form state in pending changes
+    const allChanges = new Map(pendingChanges);
+    allChanges.set(activeModule, { ...permissionsForm });
 
-    const permissionsData = {
-      user_id: editingUser.user_id,
-      module_name: activeModule,
-      can_view: permissionsForm.can_view,
-      can_create: permissionsForm.can_create,
-      can_edit_own: permissionsForm.can_edit_own,
-      can_edit_all: permissionsForm.can_edit_all,
-      can_publish: permissionsForm.can_publish,
-      can_delete_own: permissionsForm.can_delete_own,
-      can_delete_all: permissionsForm.can_delete_all,
-      custom_settings: permissionsForm.custom_settings as Record<string, unknown>,
-    };
+    let hasError = false;
+    const savedModules: string[] = [];
 
-    if (existingPerm?.id) {
-      const { error } = await supabase
-        .from("module_permissions")
-        .update({
-          ...permissionsData,
-          custom_settings: JSON.parse(JSON.stringify(permissionsData.custom_settings)),
-        })
-        .eq("id", existingPerm.id);
+    // Save all pending changes
+    for (const [moduleName, permissions] of allChanges) {
+      const existingPerm = editingUser.module_permissions.find(p => p.module_name === moduleName);
 
-      if (error) {
-        toast({
-          title: "Error",
-          description: "No se pudieron guardar los permisos",
-          variant: "destructive",
-        });
-        setSavingPermissions(false);
-        return;
-      }
-    } else {
-      const { error } = await supabase
-        .from("module_permissions")
-        .insert({
-          ...permissionsData,
-          custom_settings: JSON.parse(JSON.stringify(permissionsData.custom_settings)),
-        });
+      const permissionsData = {
+        user_id: editingUser.user_id,
+        module_name: moduleName,
+        can_view: permissions.can_view,
+        can_create: permissions.can_create,
+        can_edit_own: permissions.can_edit_own,
+        can_edit_all: permissions.can_edit_all,
+        can_publish: permissions.can_publish,
+        can_delete_own: permissions.can_delete_own,
+        can_delete_all: permissions.can_delete_all,
+        custom_settings: permissions.custom_settings as Record<string, unknown>,
+      };
 
-      if (error) {
-        toast({
-          title: "Error",
-          description: "No se pudieron crear los permisos",
-          variant: "destructive",
-        });
-        setSavingPermissions(false);
-        return;
+      if (existingPerm?.id) {
+        const { error } = await supabase
+          .from("module_permissions")
+          .update({
+            ...permissionsData,
+            custom_settings: JSON.parse(JSON.stringify(permissionsData.custom_settings)),
+          })
+          .eq("id", existingPerm.id);
+
+        if (error) {
+          hasError = true;
+          console.error(`Error updating ${moduleName}:`, error);
+        } else {
+          savedModules.push(moduleLabels[moduleName]);
+        }
+      } else {
+        const { error } = await supabase
+          .from("module_permissions")
+          .insert({
+            ...permissionsData,
+            custom_settings: JSON.parse(JSON.stringify(permissionsData.custom_settings)),
+          });
+
+        if (error) {
+          hasError = true;
+          console.error(`Error creating ${moduleName}:`, error);
+        } else {
+          savedModules.push(moduleLabels[moduleName]);
+        }
       }
     }
 
-    toast({
-      title: "Éxito",
-      description: `Permisos de ${moduleLabels[activeModule]} guardados correctamente`,
-    });
+    if (hasError) {
+      toast({
+        title: "Error parcial",
+        description: "Algunos permisos no se pudieron guardar",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Éxito",
+        description: savedModules.length > 1 
+          ? `Permisos de ${savedModules.join(', ')} guardados correctamente`
+          : `Permisos de ${savedModules[0]} guardados correctamente`,
+      });
+    }
+
     setSavingPermissions(false);
+    setPendingChanges(new Map());
     setEditingUser(null);
     fetchUsers();
   };
