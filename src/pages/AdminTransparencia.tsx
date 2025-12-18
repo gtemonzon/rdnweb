@@ -72,7 +72,11 @@ interface TransparencyDocument {
   is_active: boolean;
   display_order: number;
   created_at: string;
+  created_by: string | null;
   numeral?: Numeral;
+  profile?: {
+    full_name: string | null;
+  };
 }
 
 const currentYear = new Date().getFullYear();
@@ -147,8 +151,30 @@ const AdminTransparencia = () => {
 
     if (docsError) {
       console.error("Error fetching documents:", docsError);
+      setDocuments([]);
     } else {
-      setDocuments(docsData || []);
+      // Fetch profiles for each document
+      const userIds = [...new Set((docsData || []).filter(d => d.created_by).map(d => d.created_by))];
+      
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+        
+        const profilesMap = new Map(
+          (profilesData || []).map(p => [p.user_id, p.full_name])
+        );
+        
+        const docsWithProfiles = (docsData || []).map(doc => ({
+          ...doc,
+          profile: doc.created_by ? { full_name: profilesMap.get(doc.created_by) || null } : undefined
+        }));
+        
+        setDocuments(docsWithProfiles);
+      } else {
+        setDocuments(docsData || []);
+      }
     }
 
     setLoadingData(false);
@@ -701,7 +727,8 @@ const AdminTransparencia = () => {
                               <TableHead>Título</TableHead>
                               <TableHead>Año</TableHead>
                               <TableHead>Estado</TableHead>
-                              <TableHead>Fecha</TableHead>
+                              <TableHead>Subido por</TableHead>
+                              <TableHead>Fecha y hora</TableHead>
                               <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -727,7 +754,17 @@ const AdminTransparencia = () => {
                                   </span>
                                 </TableCell>
                                 <TableCell>
-                                  {new Date(doc.created_at).toLocaleDateString("es-GT")}
+                                  <span className="text-sm text-muted-foreground">
+                                    {doc.profile?.full_name || "—"}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    <div>{new Date(doc.created_at).toLocaleDateString("es-GT")}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {new Date(doc.created_at).toLocaleTimeString("es-GT", { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
