@@ -104,6 +104,132 @@ export type Database = {
         }
         Relationships: []
       }
+      donation_receipts: {
+        Row: {
+          cancelled_at: string | null
+          certified_at: string | null
+          created_at: string
+          created_by: string | null
+          descripcion: string
+          donation_id: string | null
+          error_message: string | null
+          id: string
+          monto: number
+          numero: string | null
+          pdf_url: string | null
+          receipt_type: string
+          receptor_correo: string | null
+          receptor_direccion: string | null
+          receptor_nit: string
+          receptor_nombre: string
+          serie: string | null
+          status: string
+          updated_at: string
+          uuid_sat: string | null
+          xml_url: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          certified_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          descripcion: string
+          donation_id?: string | null
+          error_message?: string | null
+          id?: string
+          monto: number
+          numero?: string | null
+          pdf_url?: string | null
+          receipt_type?: string
+          receptor_correo?: string | null
+          receptor_direccion?: string | null
+          receptor_nit: string
+          receptor_nombre: string
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          uuid_sat?: string | null
+          xml_url?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          certified_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string
+          donation_id?: string | null
+          error_message?: string | null
+          id?: string
+          monto?: number
+          numero?: string | null
+          pdf_url?: string | null
+          receipt_type?: string
+          receptor_correo?: string | null
+          receptor_direccion?: string | null
+          receptor_nit?: string
+          receptor_nombre?: string
+          serie?: string | null
+          status?: string
+          updated_at?: string
+          uuid_sat?: string | null
+          xml_url?: string | null
+        }
+        Relationships: []
+      }
+      fel_configuration: {
+        Row: {
+          activo: boolean
+          ambiente: string
+          codigo_establecimiento: number
+          codigo_postal: string | null
+          correo_copia: string | null
+          created_at: string
+          departamento: string
+          direccion: string
+          id: string
+          municipio: string
+          nit_emisor: string
+          nombre_comercial: string
+          nombre_emisor: string
+          pais: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          ambiente?: string
+          codigo_establecimiento?: number
+          codigo_postal?: string | null
+          correo_copia?: string | null
+          created_at?: string
+          departamento: string
+          direccion: string
+          id?: string
+          municipio: string
+          nit_emisor: string
+          nombre_comercial: string
+          nombre_emisor: string
+          pais?: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          ambiente?: string
+          codigo_establecimiento?: number
+          codigo_postal?: string | null
+          correo_copia?: string | null
+          created_at?: string
+          departamento?: string
+          direccion?: string
+          id?: string
+          municipio?: string
+          nit_emisor?: string
+          nombre_comercial?: string
+          nombre_emisor?: string
+          pais?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       module_permissions: {
         Row: {
           can_create: boolean
@@ -314,6 +440,7 @@ export type Database = {
         | "donations"
         | "content"
         | "partners"
+        | "receipts"
       app_role: "admin" | "editor"
     }
     CompositeTypes: {
@@ -449,6 +576,7 @@ export const Constants = {
         "donations",
         "content",
         "partners",
+        "receipts",
       ],
       app_role: ["admin", "editor"],
     },

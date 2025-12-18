@@ -57,7 +57,7 @@ import {
 } from "@/types/permissions";
 
 // Available modules (implemented)
-const availableModules: ModuleName[] = ['blog', 'content', 'partners'];
+const availableModules: ModuleName[] = ['blog', 'content', 'partners', 'receipts'];
 // Future modules (shown as coming soon)
 const futureModules: ModuleName[] = ['crowdfunding', 'reports', 'donations'];
 
