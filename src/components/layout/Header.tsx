@@ -9,9 +9,9 @@ const navLinks = [
   { name: "Quiénes Somos", href: "/quienes-somos" },
   { name: "Programas", href: "/programas" },
   { name: "Blog", href: "/blog" },
-  { name: "Vacantes", href: "/vacantes" },
   { name: "Transparencia", href: "/transparencia" },
   { name: "Contacto", href: "/contacto" },
+  { name: "Vacantes", href: "/vacantes" },
 ];
 
 const Header = () => {
