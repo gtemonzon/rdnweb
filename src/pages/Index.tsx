@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CountUpStat from "@/components/CountUpStat";
 import PartnersCarousel from "@/components/PartnersCarousel";
+import misionImage from "@/assets/mision-refugio.png";
+import visionImageAsset from "@/assets/vision-refugio.png";
 
 interface StatItem {
   number: string;
@@ -117,13 +119,13 @@ const Index = () => {
   const missionText =
     missionData?.text ||
     "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
-  const missionImage =
-    missionData?.image_url || "https://images.unsplash.com/photo-1594708767771-a7502f3ed4a4?w=800&q=80";
+  const missionImageUrl =
+    missionData?.image_url || misionImage;
   const visionText =
     visionData?.text ||
     "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
-  const visionImage =
-    visionData?.image_url || "https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80";
+  const visionImageUrl =
+    visionData?.image_url || visionImageAsset;
 
   return (
     <Layout>
@@ -190,51 +192,36 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Mission & Vision Section with Images */}
-      <section className="py-20 bg-card overflow-hidden">
-        <div className="container">
-          <div className="grid lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="order-2 lg:order-1">
-              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Misión</span>
-              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
-                Protección integral para la niñez
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">{missionText}</p>
-            </div>
-            <div className="order-1 lg:order-2 relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
-                <img
-                  src={missionImage}
-                  alt="Niños en actividades"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent rounded-2xl flex items-center justify-center shadow-lg">
-                <Heart className="w-12 h-12 text-accent-foreground" />
-              </div>
-            </div>
+      {/* Mission Section with Parallax Background */}
+      <section 
+        className="relative py-32 bg-fixed bg-cover bg-center"
+        style={{ backgroundImage: `url(${missionImageUrl})` }}
+      >
+        <div className="absolute inset-0 bg-black/60"></div>
+        <div className="container relative z-10">
+          <div className="max-w-3xl">
+            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Misión</span>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mt-2 mb-6">
+              Protección integral para la niñez
+            </h2>
+            <p className="text-lg text-white/90 leading-relaxed">{missionText}</p>
           </div>
+        </div>
+      </section>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="relative">
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
-                <img
-                  src={visionImage}
-                  alt="Futuro brillante"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                />
-              </div>
-              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
-                <Users className="w-12 h-12 text-primary-foreground" />
-              </div>
-            </div>
-            <div>
-              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Visión</span>
-              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
-                Un futuro sin violencia
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">{visionText}</p>
-            </div>
+      {/* Vision Section with Parallax Background */}
+      <section 
+        className="relative py-32 bg-fixed bg-cover bg-center"
+        style={{ backgroundImage: `url(${visionImageUrl})` }}
+      >
+        <div className="absolute inset-0 bg-black/60"></div>
+        <div className="container relative z-10">
+          <div className="max-w-3xl ml-auto text-right">
+            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Visión</span>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mt-2 mb-6">
+              Un futuro sin violencia
+            </h2>
+            <p className="text-lg text-white/90 leading-relaxed">{visionText}</p>
           </div>
         </div>
       </section>
