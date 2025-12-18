@@ -5,8 +5,7 @@ import Layout from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CountUpStat from "@/components/CountUpStat";
-import misionImage from "@/assets/mision-refugio.png";
-import visionImage from "@/assets/vision-refugio.png";
+
 interface StatItem {
   number: string;
   label: string;
@@ -114,10 +113,16 @@ const Index = () => {
   });
 
   const stats = statsData || defaultStats;
-  const missionText = missionData?.text || "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
-  const missionImageUrl = missionData?.image_url || misionImage;
-  const visionText = visionData?.text || "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
-  const visionImageUrl = visionData?.image_url || visionImage;
+  const missionText =
+    missionData?.text ||
+    "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
+  const missionImage =
+    missionData?.image_url || "https://images.unsplash.com/photo-1594708767771-a7502f3ed4a4?w=800&q=80";
+  const visionText =
+    visionData?.text ||
+    "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
+  const visionImage =
+    visionData?.image_url || "https://images.unsplash.com/photo-1529390079861-591f854a0d1c?w=800&q=80";
 
   return (
     <Layout>
@@ -125,23 +130,18 @@ const Index = () => {
       <section className="relative min-h-[80vh] flex items-center overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          <img
-            src={heroImages[0]}
-            alt="Niños felices"
-            className="w-full h-full object-cover"
-          />
+          <img src={heroImages[0]} alt="Niños felices" className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/50" />
         </div>
-        
+
         <div className="container relative z-10">
           <div className="max-w-2xl animate-fade-in">
             <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 text-balance drop-shadow-lg">
-              Protegemos los derechos de la{" "}
-              <span className="text-accent">niñez</span> guatemalteca
+              Protegemos los derechos de la <span className="text-accent">niñez</span> guatemalteca
             </h1>
             <p className="text-lg md:text-xl text-white/90 mb-8 max-w-xl drop-shadow">
-              Desde hace más de 30 años trabajamos por la restitución de derechos 
-              de niños, niñas y adolescentes víctimas de violencia y explotación.
+              Desde hace más de 16 años trabajamos por la restitución de derechos de niños, niñas y adolescentes
+              víctimas de violencia y explotación.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg" asChild>
@@ -150,7 +150,12 @@ const Index = () => {
                   Donar Ahora
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 border-white text-white hover:bg-white/20 backdrop-blur-sm" asChild>
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-white/10 border-white text-white hover:bg-white/20 backdrop-blur-sm"
+                asChild
+              >
                 <Link to="/quienes-somos">
                   Conoce Nuestra Historia
                   <ArrowRight className="w-5 h-5 ml-2" />
@@ -159,23 +164,15 @@ const Index = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Decorative floating images */}
         <div className="hidden lg:block absolute right-10 top-1/2 -translate-y-1/2 z-10">
           <div className="relative">
             <div className="w-64 h-80 rounded-2xl overflow-hidden shadow-2xl transform rotate-3 animate-float">
-              <img
-                src={heroImages[1]}
-                alt="Niños en actividades"
-                className="w-full h-full object-cover"
-              />
+              <img src={heroImages[1]} alt="Niños en actividades" className="w-full h-full object-cover" />
             </div>
             <div className="absolute -bottom-10 -left-16 w-48 h-60 rounded-2xl overflow-hidden shadow-2xl transform -rotate-6 animate-float-delayed">
-              <img
-                src={heroImages[2]}
-                alt="Actividades educativas"
-                className="w-full h-full object-cover"
-              />
+              <img src={heroImages[2]} alt="Actividades educativas" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
@@ -192,69 +189,50 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Mission Section with Parallax Background */}
-      <section className="relative min-h-[70vh] flex items-center overflow-hidden">
-        {/* Parallax Background */}
-        <div 
-          className="absolute inset-0 z-0 bg-fixed bg-center bg-cover"
-          style={{ backgroundImage: `url(${missionImageUrl})` }}
-        />
-        {/* Overlay */}
-        <div className="absolute inset-0 z-0 bg-gradient-to-r from-primary/90 via-primary/80 to-primary/70" />
-        
-        <div className="container relative z-10 py-20">
-          <div className="max-w-2xl">
-            <span className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white/90 font-semibold text-sm uppercase tracking-wider mb-4">
-              Nuestra Misión
-            </span>
-            <h2 className="font-heading text-3xl md:text-5xl font-bold text-white mt-2 mb-6 drop-shadow-lg">
-              Protección integral para la niñez
-            </h2>
-            <p className="text-lg md:text-xl text-white/90 leading-relaxed drop-shadow">
-              {missionText}
-            </p>
-            <div className="mt-8 flex items-center gap-4">
-              <div className="w-16 h-16 bg-accent rounded-xl flex items-center justify-center shadow-lg">
-                <Heart className="w-8 h-8 text-accent-foreground" />
+      {/* Mission & Vision Section with Images */}
+      <section className="py-20 bg-card overflow-hidden">
+        <div className="container">
+          <div className="grid lg:grid-cols-2 gap-12 items-center mb-20">
+            <div className="order-2 lg:order-1">
+              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Misión</span>
+              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
+                Protección integral para la niñez
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">{missionText}</p>
+            </div>
+            <div className="order-1 lg:order-2 relative">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
+                <img
+                  src={missionImage}
+                  alt="Niños en actividades"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                />
               </div>
-              <div className="text-white">
-                <p className="font-semibold text-lg">Más de 30 años</p>
-                <p className="text-white/80">protegiendo a la niñez guatemalteca</p>
+              <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent rounded-2xl flex items-center justify-center shadow-lg">
+                <Heart className="w-12 h-12 text-accent-foreground" />
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Vision Section with Parallax Background */}
-      <section className="relative min-h-[70vh] flex items-center overflow-hidden">
-        {/* Parallax Background */}
-        <div 
-          className="absolute inset-0 z-0 bg-fixed bg-center bg-cover"
-          style={{ backgroundImage: `url(${visionImageUrl})` }}
-        />
-        {/* Overlay */}
-        <div className="absolute inset-0 z-0 bg-gradient-to-l from-secondary/90 via-secondary/80 to-secondary/70" />
-        
-        <div className="container relative z-10 py-20">
-          <div className="max-w-2xl ml-auto text-right">
-            <span className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full text-secondary-foreground/90 font-semibold text-sm uppercase tracking-wider mb-4">
-              Nuestra Visión
-            </span>
-            <h2 className="font-heading text-3xl md:text-5xl font-bold text-secondary-foreground mt-2 mb-6 drop-shadow-lg">
-              Un futuro sin violencia
-            </h2>
-            <p className="text-lg md:text-xl text-secondary-foreground/90 leading-relaxed drop-shadow">
-              {visionText}
-            </p>
-            <div className="mt-8 flex items-center gap-4 justify-end">
-              <div className="text-secondary-foreground text-right">
-                <p className="font-semibold text-lg">Guatemala</p>
-                <p className="text-secondary-foreground/80">un futuro seguro para nuestra niñez</p>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="relative">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden shadow-xl bg-muted">
+                <img
+                  src={visionImage}
+                  alt="Futuro brillante"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                />
               </div>
-              <div className="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
-                <Users className="w-8 h-8 text-primary-foreground" />
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+                <Users className="w-12 h-12 text-primary-foreground" />
               </div>
+            </div>
+            <div>
+              <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Visión</span>
+              <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-6">
+                Un futuro sin violencia
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">{visionText}</p>
             </div>
           </div>
         </div>
@@ -269,8 +247,7 @@ const Index = () => {
               Nuestros Programas
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Trabajamos a través de programas especializados para brindar 
-              atención integral a la niñez y adolescencia.
+              Trabajamos a través de programas especializados para brindar atención integral a la niñez y adolescencia.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -283,12 +260,8 @@ const Index = () => {
                 <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
                   <program.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors" />
                 </div>
-                <h3 className="font-heading font-semibold text-lg mb-2">
-                  {program.title}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {program.description}
-                </p>
+                <h3 className="font-heading font-semibold text-lg mb-2">{program.title}</h3>
+                <p className="text-sm text-muted-foreground">{program.description}</p>
               </div>
             ))}
           </div>
@@ -319,8 +292,8 @@ const Index = () => {
               Tu apoyo transforma vidas
             </h2>
             <p className="text-lg md:text-xl mb-10 text-secondary-foreground/90 max-w-2xl mx-auto">
-              Cada donación nos permite continuar protegiendo a niños, niñas 
-              y adolescentes que más lo necesitan. Únete a nuestra causa.
+              Cada donación nos permite continuar protegiendo a niños, niñas y adolescentes que más lo necesitan. Únete
+              a nuestra causa.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
@@ -339,9 +312,7 @@ const Index = () => {
                 className="bg-white/10 border-white text-white hover:bg-white/20 backdrop-blur-sm"
                 asChild
               >
-                <Link to="/contacto">
-                  Contáctanos
-                </Link>
+                <Link to="/contacto">Contáctanos</Link>
               </Button>
             </div>
           </div>
@@ -356,52 +327,45 @@ const Index = () => {
             <h2 className="font-heading text-2xl md:text-3xl font-semibold text-foreground mt-2 mb-2">
               Socios Cooperantes
             </h2>
-            <p className="text-muted-foreground">
-              Trabajamos junto a organizaciones comprometidas con la niñez
-            </p>
+            <p className="text-muted-foreground">Trabajamos junto a organizaciones comprometidas con la niñez</p>
           </div>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
-            {partners && partners.length > 0 ? (
-              partners.map((partner) => (
-                <div
-                  key={partner.id}
-                  className="flex items-center gap-3"
-                >
-                  {partner.logo_url && partner.logo_url !== "/placeholder.svg" ? (
-                    <a 
-                      href={partner.website_url || "#"} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="opacity-70 hover:opacity-100 transition-opacity duration-300"
-                    >
-                      <img 
-                        src={partner.logo_url} 
-                        alt={partner.name}
-                        className="h-14 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
-                      />
-                    </a>
-                  ) : (
-                    <a 
-                      href={partner.website_url || "#"} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
-                    >
-                      {partner.name}
-                    </a>
-                  )}
-                </div>
-              ))
-            ) : (
-              ["ACNUR", "Plan International", "UNICEF", "Save the Children", "World Vision"].map((name) => (
-                <div
-                  key={name}
-                  className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
-                >
-                  {name}
-                </div>
-              ))
-            )}
+            {partners && partners.length > 0
+              ? partners.map((partner) => (
+                  <div key={partner.id} className="flex items-center gap-3">
+                    {partner.logo_url && partner.logo_url !== "/placeholder.svg" ? (
+                      <a
+                        href={partner.website_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="opacity-70 hover:opacity-100 transition-opacity duration-300"
+                      >
+                        <img
+                          src={partner.logo_url}
+                          alt={partner.name}
+                          className="h-14 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                        />
+                      </a>
+                    ) : (
+                      <a
+                        href={partner.website_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
+                      >
+                        {partner.name}
+                      </a>
+                    )}
+                  </div>
+                ))
+              : ["ACNUR", "Plan International", "UNICEF", "Save the Children", "World Vision"].map((name) => (
+                  <div
+                    key={name}
+                    className="text-muted-foreground font-semibold text-lg opacity-60 hover:opacity-100 transition-opacity"
+                  >
+                    {name}
+                  </div>
+                ))}
           </div>
         </div>
       </section>
