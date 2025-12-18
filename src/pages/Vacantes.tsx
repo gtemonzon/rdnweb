@@ -91,6 +91,17 @@ const Vacantes = () => {
     }
   };
 
+  // Ensure external URLs have proper protocol
+  const ensureExternalUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    // If it already has a protocol, return as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Add https:// if missing
+    return `https://${url}`;
+  };
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -178,9 +189,9 @@ const Vacantes = () => {
                             </a>
                           </Button>
                         )}
-                        {vacancy.application_url && (
+                        {vacancy.application_url && ensureExternalUrl(vacancy.application_url) && (
                           <Button className="bg-accent hover:bg-accent/90" asChild>
-                            <a href={vacancy.application_url} target="_blank" rel="noopener noreferrer">
+                            <a href={ensureExternalUrl(vacancy.application_url)!} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="w-4 h-4 mr-2" />
                               Postularme
                             </a>
