@@ -1,5 +1,5 @@
 // Module types
-export type ModuleName = 'blog' | 'crowdfunding' | 'reports' | 'donations' | 'content' | 'partners' | 'receipts';
+export type ModuleName = 'blog' | 'crowdfunding' | 'reports' | 'donations' | 'content' | 'partners' | 'receipts' | 'transparency';
 
 // Standard permissions that apply to all modules
 export interface ModulePermissions {
@@ -49,6 +49,7 @@ export const moduleLabels: Record<ModuleName, string> = {
   content: 'Contenido',
   partners: 'Aliados',
   receipts: 'Recibos FEL',
+  transparency: 'Transparencia',
 };
 
 // Permission labels in Spanish

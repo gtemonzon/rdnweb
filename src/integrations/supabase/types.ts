@@ -524,6 +524,89 @@ export type Database = {
         }
         Relationships: []
       }
+      transparency_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          file_type: string
+          file_url: string
+          id: string
+          is_active: boolean
+          numeral_id: number
+          title: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          file_type?: string
+          file_url: string
+          id?: string
+          is_active?: boolean
+          numeral_id: number
+          title: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_active?: boolean
+          numeral_id?: number
+          title?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transparency_documents_numeral_id_fkey"
+            columns: ["numeral_id"]
+            isOneToOne: false
+            referencedRelation: "transparency_numerals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transparency_numerals: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          id: number
+          is_active: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id: number
+          is_active?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: number
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -592,6 +675,7 @@ export type Database = {
         | "content"
         | "partners"
         | "receipts"
+        | "transparency"
       app_role: "admin" | "editor"
     }
     CompositeTypes: {
@@ -728,6 +812,7 @@ export const Constants = {
         "content",
         "partners",
         "receipts",
+        "transparency",
       ],
       app_role: ["admin", "editor"],
     },

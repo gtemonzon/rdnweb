@@ -1,61 +1,91 @@
-import { FileText, Download, Calendar, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, Download, Calendar, ExternalLink, ChevronDown, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
-const years = ["2024", "2023", "2022", "2021", "2020"];
+interface Numeral {
+  id: number;
+  title: string;
+  description: string | null;
+  is_active: boolean;
+  display_order: number;
+}
 
-const reports = [
-  {
-    id: 1,
-    title: "Informe Anual 2024",
-    description: "Resumen de actividades, logros y estados financieros del año 2024.",
-    date: "Diciembre 2024",
-    type: "Informe Anual",
-    year: "2024",
-  },
-  {
-    id: 2,
-    title: "Memoria de Labores - Tercer Trimestre 2024",
-    description: "Detalle de actividades realizadas de julio a septiembre 2024.",
-    date: "Octubre 2024",
-    type: "Memoria Trimestral",
-    year: "2024",
-  },
-  {
-    id: 3,
-    title: "Auditoría Financiera 2024",
-    description: "Informe de auditoría externa sobre estados financieros.",
-    date: "Septiembre 2024",
-    type: "Auditoría",
-    year: "2024",
-  },
-  {
-    id: 4,
-    title: "Informe de Impacto Social 2023",
-    description: "Análisis del impacto de nuestros programas en beneficiarios.",
-    date: "Marzo 2024",
-    type: "Impacto",
-    year: "2023",
-  },
-  {
-    id: 5,
-    title: "Informe Anual 2023",
-    description: "Resumen completo de actividades y resultados del año 2023.",
-    date: "Diciembre 2023",
-    type: "Informe Anual",
-    year: "2023",
-  },
-  {
-    id: 6,
-    title: "Estados Financieros 2023",
-    description: "Balance general y estado de resultados auditados.",
-    date: "Abril 2024",
-    type: "Financiero",
-    year: "2023",
-  },
-];
+interface TransparencyDocument {
+  id: string;
+  numeral_id: number;
+  year: number;
+  title: string;
+  description: string | null;
+  file_url: string;
+  file_type: string;
+  is_active: boolean;
+  created_at: string;
+}
 
 const Transparencia = () => {
+  const [numerals, setNumerals] = useState<Numeral[]>([]);
+  const [documents, setDocuments] = useState<TransparencyDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState<string>("all");
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    // Fetch active numerals
+    const { data: numeralsData } = await supabase
+      .from("transparency_numerals")
+      .select("*")
+      .eq("is_active", true)
+      .order("display_order");
+
+    // Fetch active documents
+    const { data: docsData } = await supabase
+      .from("transparency_documents")
+      .select("*")
+      .eq("is_active", true)
+      .order("year", { ascending: false })
+      .order("display_order");
+
+    setNumerals(numeralsData || []);
+    setDocuments(docsData || []);
+    setLoading(false);
+  };
+
+  // Get unique years from documents
+  const years = [...new Set(documents.map((d) => d.year))].sort((a, b) => b - a);
+
+  // Filter documents by year
+  const filteredDocuments = selectedYear === "all" 
+    ? documents 
+    : documents.filter((d) => d.year.toString() === selectedYear);
+
+  // Group documents by numeral, then by year
+  const groupedByNumeral = numerals.reduce((acc, numeral) => {
+    const numeralDocs = filteredDocuments.filter((d) => d.numeral_id === numeral.id);
+    if (numeralDocs.length > 0) {
+      // Group by year within numeral
+      const byYear = numeralDocs.reduce((yearAcc, doc) => {
+        if (!yearAcc[doc.year]) yearAcc[doc.year] = [];
+        yearAcc[doc.year].push(doc);
+        return yearAcc;
+      }, {} as Record<number, TransparencyDocument[]>);
+      acc[numeral.id] = { numeral, byYear };
+    }
+    return acc;
+  }, {} as Record<number, { numeral: Numeral; byYear: Record<number, TransparencyDocument[]> }>);
+
+  const hasDocuments = Object.keys(groupedByNumeral).length > 0;
+
   return (
     <Layout>
       {/* Hero */}
@@ -66,8 +96,8 @@ const Transparencia = () => {
               Transparencia
             </h1>
             <p className="text-lg text-muted-foreground">
-              Creemos en la rendición de cuentas. Aquí encontrarás nuestros 
-              informes, auditorías y documentos de transparencia institucional.
+              Información Pública de Oficio conforme a la Ley de Acceso a la Información Pública (LAIP), 
+              Decreto 57-2008, Artículo 10.
             </p>
           </div>
         </div>
@@ -82,64 +112,172 @@ const Transparencia = () => {
             </h2>
             <p className="text-primary-foreground/90">
               Como organización sin fines de lucro, mantenemos los más altos 
-              estándares de transparencia y rendición de cuentas. Todos nuestros 
-              fondos se utilizan de manera responsable para cumplir nuestra misión.
+              estándares de transparencia y rendición de cuentas. Toda la información 
+              aquí publicada cumple con las obligaciones establecidas en la LAIP.
             </p>
           </div>
         </div>
       </section>
 
       {/* Year Filter */}
-      <section className="py-8 bg-card border-b border-border">
-        <div className="container">
-          <div className="flex flex-wrap gap-2 justify-center">
-            <Button variant="default" size="sm">
-              Todos
-            </Button>
-            {years.map((year) => (
-              <Button key={year} variant="outline" size="sm">
-                {year}
+      {years.length > 0 && (
+        <section className="py-8 bg-card border-b border-border">
+          <div className="container">
+            <div className="flex flex-wrap gap-2 justify-center">
+              <Button 
+                variant={selectedYear === "all" ? "default" : "outline"} 
+                size="sm"
+                onClick={() => setSelectedYear("all")}
+              >
+                Todos los años
               </Button>
-            ))}
+              {years.map((year) => (
+                <Button 
+                  key={year} 
+                  variant={selectedYear === year.toString() ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedYear(year.toString())}
+                >
+                  {year}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Reports Grid */}
+      {/* Documents by Numeral */}
       <section className="py-16 bg-muted">
         <div className="container">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {reports.map((report) => (
-              <div
-                key={report.id}
-                className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-primary" />
-                  </div>
-                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-muted text-muted-foreground">
-                    {report.type}
-                  </span>
-                </div>
-                <h3 className="font-heading font-semibold text-lg text-foreground mb-2">
-                  {report.title}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {report.description}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {report.date}
-                  </span>
-                  <Button variant="outline" size="sm">
-                    <Download className="w-4 h-4 mr-1" />
-                    Descargar
-                  </Button>
-                </div>
+          <div className="max-w-4xl mx-auto">
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-8 text-center">
+              Artículo 10 - Información Pública de Oficio
+            </h2>
+
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Cargando información...</p>
               </div>
-            ))}
+            ) : !hasDocuments ? (
+              <div className="text-center py-12 bg-card rounded-xl">
+                <FolderOpen className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  Próximamente se publicará la información de transparencia.
+                </p>
+              </div>
+            ) : (
+              <Accordion type="multiple" className="space-y-3">
+                {Object.entries(groupedByNumeral)
+                  .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                  .map(([numeralId, { numeral, byYear }]) => (
+                    <AccordionItem 
+                      key={numeralId} 
+                      value={numeralId}
+                      className="bg-card rounded-xl border-none shadow-sm overflow-hidden"
+                    >
+                      <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center gap-4 text-left">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="font-bold text-primary">{numeral.id}</span>
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-foreground">{numeral.title}</h3>
+                            {numeral.description && (
+                              <p className="text-sm text-muted-foreground mt-0.5">
+                                {numeral.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-6 pb-6">
+                        <div className="space-y-6 pt-2">
+                          {Object.entries(byYear)
+                            .sort(([a], [b]) => parseInt(b) - parseInt(a))
+                            .map(([year, docs]) => (
+                              <div key={year}>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                                  <span className="font-medium text-foreground">{year}</span>
+                                </div>
+                                <div className="space-y-2 pl-6">
+                                  {docs.map((doc) => (
+                                    <div 
+                                      key={doc.id}
+                                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <FileText className="w-5 h-5 text-primary shrink-0" />
+                                        <div className="min-w-0">
+                                          <p className="font-medium text-foreground truncate">
+                                            {doc.title}
+                                          </p>
+                                          {doc.description && (
+                                            <p className="text-sm text-muted-foreground truncate">
+                                              {doc.description}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        className="shrink-0 opacity-70 group-hover:opacity-100"
+                                        asChild
+                                      >
+                                        <a 
+                                          href={doc.file_url} 
+                                          target="_blank" 
+                                          rel="noopener noreferrer"
+                                          download
+                                        >
+                                          <Download className="w-4 h-4 mr-1" />
+                                          Descargar
+                                        </a>
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+              </Accordion>
+            )}
+
+            {/* Numerals without documents (informational) */}
+            {!loading && hasDocuments && (
+              <div className="mt-8">
+                <details className="group">
+                  <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                    Ver todos los numerales del Artículo 10
+                  </summary>
+                  <div className="mt-4 grid gap-2">
+                    {numerals.map((n) => {
+                      const hasDocs = groupedByNumeral[n.id];
+                      return (
+                        <div 
+                          key={n.id}
+                          className={`p-3 rounded-lg text-sm ${
+                            hasDocs 
+                              ? "bg-primary/5 text-foreground" 
+                              : "bg-muted/30 text-muted-foreground"
+                          }`}
+                        >
+                          <span className="font-medium">{n.id}.</span> {n.title}
+                          {hasDocs && (
+                            <span className="ml-2 text-xs text-primary">✓</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -181,6 +319,24 @@ const Transparencia = () => {
                 <ExternalLink className="w-4 h-4 text-muted-foreground" />
               </a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact for Information Requests */}
+      <section className="py-16 bg-muted">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="font-heading text-2xl font-bold text-foreground mb-4">
+              Solicitud de Información
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              Si necesitas información adicional que no se encuentra publicada, 
+              puedes realizar una solicitud formal conforme al Artículo 38 de la LAIP.
+            </p>
+            <Button asChild>
+              <a href="/contacto">Contactar</a>
+            </Button>
           </div>
         </div>
       </section>
