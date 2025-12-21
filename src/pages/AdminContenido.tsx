@@ -61,8 +61,13 @@ const AdminContenido = () => {
     mutationFn: async ({ sectionKey, content }: { sectionKey: string; content: Json }) => {
       const { error } = await supabase
         .from("site_content")
-        .update({ content, updated_by: user?.id })
-        .eq("section_key", sectionKey);
+        .upsert({ 
+          section_key: sectionKey, 
+          content, 
+          updated_by: user?.id 
+        }, { 
+          onConflict: 'section_key' 
+        });
       if (error) throw error;
     },
     onSuccess: () => {
