@@ -50,7 +50,7 @@ const QuienesSomos = () => {
         .from("site_content")
         .select("content")
         .eq("section_key", "mission")
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data?.content as { text: string } | null;
     },
@@ -64,7 +64,7 @@ const QuienesSomos = () => {
         .from("site_content")
         .select("content")
         .eq("section_key", "vision")
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data?.content as { text: string } | null;
     },
@@ -78,7 +78,7 @@ const QuienesSomos = () => {
         .from("site_content")
         .select("content")
         .eq("section_key", "values")
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data?.content as unknown as ValueItem[] | null;
     },
@@ -92,7 +92,7 @@ const QuienesSomos = () => {
         .from("site_content")
         .select("content")
         .eq("section_key", "timeline")
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data?.content as unknown as TimelineItem[] | null;
     },
