@@ -261,9 +261,12 @@ const Index = () => {
       <section className="relative py-24 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
-            src="https://images.unsplash.com/photo-1469406396016-013bfae5d83e?w=1200&q=80"
+            src="https://images.unsplash.com/photo-1469406396016-013bfae5d83e?w=1200&q=80&fm=webp"
             alt="Esperanza"
             className="w-full h-full object-cover"
+            loading="lazy"
+            width={1200}
+            height={800}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-secondary/95 via-secondary/85 to-secondary/75" />
         </div>
