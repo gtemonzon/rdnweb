@@ -26,6 +26,8 @@ const Header = () => {
             src={logo} 
             alt="El Refugio de la Niñez" 
             className="h-14 w-auto"
+            width={190}
+            height={56}
           />
         </Link>
 

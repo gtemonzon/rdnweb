@@ -64,6 +64,9 @@ const PartnersCarousel = ({ partners }: PartnersCarouselProps) => {
                       src={partner.logo_url}
                       alt={partner.name}
                       className="h-14 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                      loading="lazy"
+                      width={120}
+                      height={56}
                     />
                   </a>
                 ) : (
