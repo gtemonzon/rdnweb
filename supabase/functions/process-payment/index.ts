@@ -42,14 +42,33 @@ async function generateDigest(payload: string): Promise<string> {
   return `SHA-256=${toBase64(new Uint8Array(hashBuffer))}`;
 }
 
-// Decode base64 safely
-function fromBase64(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+// Decode secret key: Cybersource secrets are commonly base64, but some setups provide raw or hex.
+function decodeSecretKey(secretKey: string): Uint8Array {
+  const trimmed = secretKey.trim();
+
+  // Hex
+  if (/^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length % 2 === 0) {
+    const out = new Uint8Array(trimmed.length / 2);
+    for (let i = 0; i < trimmed.length; i += 2) {
+      out[i / 2] = parseInt(trimmed.slice(i, i + 2), 16);
+    }
+    return out;
   }
-  return bytes;
+
+  // Base64 (best-effort)
+  try {
+    // tolerate missing padding
+    const padded = trimmed + "===".slice((trimmed.length + 3) % 4);
+    const binaryString = atob(padded);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  } catch {
+    // Raw string
+    return new TextEncoder().encode(trimmed);
+  }
 }
 
 // Generate HMAC-SHA256 signature
@@ -58,8 +77,8 @@ async function generateSignature(
   signatureString: string
 ): Promise<string> {
   const encoder = new TextEncoder();
-  // Decode the base64 secret key
-  const keyData = fromBase64(secretKey);
+  const keyData = decodeSecretKey(secretKey);
+
   const key = await crypto.subtle.importKey(
     "raw",
     keyData.buffer as ArrayBuffer,
@@ -183,6 +202,16 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Non-sensitive diagnostics to verify we are using the expected credentials
+    console.log("Cybersource config:", {
+      host: CYBERSOURCE_HOST,
+      merchantIdLen: CYBERSOURCE_MERCHANT_ID.length,
+      keyIdLen: CYBERSOURCE_KEY_ID.length,
+      secretLen: CYBERSOURCE_SECRET_KEY.length,
+      merchantIdSuffix: CYBERSOURCE_MERCHANT_ID.slice(-6),
+      keyIdSuffix: CYBERSOURCE_KEY_ID.slice(-6),
+    });
 
     const data: PaymentRequest = await req.json();
     console.log("Payment request data:", {
