@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info } from "lucide-react";
+import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,6 +74,23 @@ const donationSchema = z.object({
   amount: z.number().min(1, "El monto debe ser mayor a 0"),
 });
 
+const cardSchema = z.object({
+  cardNumber: z.string()
+    .min(13, "Número de tarjeta inválido")
+    .max(19, "Número de tarjeta inválido")
+    .regex(/^[0-9\s]+$/, "Solo se permiten números"),
+  expirationMonth: z.string()
+    .length(2, "Mes inválido")
+    .regex(/^(0[1-9]|1[0-2])$/, "Mes debe ser 01-12"),
+  expirationYear: z.string()
+    .length(4, "Año inválido")
+    .regex(/^20[2-9][0-9]$/, "Año inválido"),
+  cvv: z.string()
+    .min(3, "CVV inválido")
+    .max(4, "CVV inválido")
+    .regex(/^[0-9]+$/, "Solo se permiten números"),
+});
+
 const Donar = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,8 +107,20 @@ const Donar = () => {
     city: "",
     department: "",
   });
+  const [cardData, setCardData] = useState({
+    cardNumber: "",
+    expirationMonth: "",
+    expirationYear: "",
+    cvv: "",
+  });
 
   const finalAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
+
+  const formatCardNumber = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    const groups = digits.match(/.{1,4}/g);
+    return groups ? groups.join(" ").substring(0, 19) : "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,32 +149,78 @@ const Donar = () => {
       return;
     }
 
+    // Validate card data if payment method is card
+    if (paymentMethod === "tarjeta") {
+      const cardValidation = cardSchema.safeParse(cardData);
+      if (!cardValidation.success) {
+        toast({
+          title: "Error en datos de tarjeta",
+          description: cardValidation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: {
-          type: "donation",
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          phone: formData.phone || undefined,
-          nit: formData.nit || undefined,
-          city: formData.city || undefined,
-          department: formData.department || undefined,
-          amount: finalAmount,
-          donationType,
-          paymentMethod,
-        },
-      });
+      if (paymentMethod === "tarjeta") {
+        // Process card payment via Cybersource
+        const { data, error } = await supabase.functions.invoke("process-payment", {
+          body: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone || undefined,
+            nit: formData.nit || undefined,
+            city: formData.city,
+            department: formData.department,
+            amount: finalAmount,
+            donationType,
+            cardNumber: cardData.cardNumber.replace(/\s/g, ""),
+            expirationMonth: cardData.expirationMonth,
+            expirationYear: cardData.expirationYear,
+            cvv: cardData.cvv,
+          },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "¡Gracias por tu generosidad!",
-        description: "Hemos recibido tu intención de donación. Te enviaremos un correo con los detalles.",
-      });
+        if (data?.status === "AUTHORIZED" || data?.status === "PENDING") {
+          toast({
+            title: "¡Pago procesado exitosamente!",
+            description: "Tu donación ha sido procesada. Recibirás un correo de confirmación.",
+          });
+        } else {
+          throw new Error(data?.message || "Error al procesar el pago");
+        }
+      } else {
+        // Send email for bank transfer
+        const { data, error } = await supabase.functions.invoke("send-email", {
+          body: {
+            type: "donation",
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email,
+            phone: formData.phone || undefined,
+            nit: formData.nit || undefined,
+            city: formData.city || undefined,
+            department: formData.department || undefined,
+            amount: finalAmount,
+            donationType,
+            paymentMethod,
+          },
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "¡Gracias por tu generosidad!",
+          description: "Hemos recibido tu intención de donación. Te enviaremos un correo con los detalles.",
+        });
+      }
 
       // Reset form
       setFormData({
@@ -157,13 +232,19 @@ const Donar = () => {
         city: "",
         department: "",
       });
+      setCardData({
+        cardNumber: "",
+        expirationMonth: "",
+        expirationYear: "",
+        cvv: "",
+      });
       setSelectedAmount(null);
       setCustomAmount("");
     } catch (error: any) {
       console.error("Error processing donation:", error);
       toast({
         title: "Error al procesar",
-        description: "No pudimos procesar tu donación. Por favor intenta de nuevo.",
+        description: error.message || "No pudimos procesar tu donación. Por favor intenta de nuevo.",
         variant: "destructive",
       });
     } finally {
@@ -403,6 +484,85 @@ const Donar = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Credit Card Fields - Only show when payment method is card */}
+                {paymentMethod === "tarjeta" && (
+                  <div className="mb-6 p-4 rounded-lg border-2 border-primary/20 bg-primary/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Lock className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">Pago seguro</span>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="card-number">Número de tarjeta *</Label>
+                        <Input
+                          id="card-number"
+                          placeholder="1234 5678 9012 3456"
+                          value={cardData.cardNumber}
+                          onChange={(e) => setCardData((prev) => ({ 
+                            ...prev, 
+                            cardNumber: formatCardNumber(e.target.value) 
+                          }))}
+                          disabled={isSubmitting}
+                          maxLength={19}
+                          required
+                          autoComplete="cc-number"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="card-exp-month">Mes *</Label>
+                          <Input
+                            id="card-exp-month"
+                            placeholder="MM"
+                            value={cardData.expirationMonth}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "").substring(0, 2);
+                              setCardData((prev) => ({ ...prev, expirationMonth: value }));
+                            }}
+                            disabled={isSubmitting}
+                            maxLength={2}
+                            required
+                            autoComplete="cc-exp-month"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="card-exp-year">Año *</Label>
+                          <Input
+                            id="card-exp-year"
+                            placeholder="AAAA"
+                            value={cardData.expirationYear}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "").substring(0, 4);
+                              setCardData((prev) => ({ ...prev, expirationYear: value }));
+                            }}
+                            disabled={isSubmitting}
+                            maxLength={4}
+                            required
+                            autoComplete="cc-exp-year"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="card-cvv">CVV *</Label>
+                          <Input
+                            id="card-cvv"
+                            type="password"
+                            placeholder="123"
+                            value={cardData.cvv}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "").substring(0, 4);
+                              setCardData((prev) => ({ ...prev, cvv: value }));
+                            }}
+                            disabled={isSubmitting}
+                            maxLength={4}
+                            required
+                            autoComplete="cc-csc"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || finalAmount <= 0}>
                   {isSubmitting ? (
