@@ -1,14 +1,52 @@
 import { useState } from "react";
-import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2 } from "lucide-react";
+import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import Layout from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const donationAmounts = [50, 100, 250, 500, 1000];
+
+const guatemalaDepartments = [
+  "Alta Verapaz",
+  "Baja Verapaz",
+  "Chimaltenango",
+  "Chiquimula",
+  "El Progreso",
+  "Escuintla",
+  "Guatemala",
+  "Huehuetenango",
+  "Izabal",
+  "Jalapa",
+  "Jutiapa",
+  "Petén",
+  "Quetzaltenango",
+  "Quiché",
+  "Retalhuleu",
+  "Sacatepéquez",
+  "San Marcos",
+  "Santa Rosa",
+  "Sololá",
+  "Suchitepéquez",
+  "Totonicapán",
+  "Zacapa",
+];
 
 const impactItems = [
   { amount: "Q50", description: "Material educativo para un niño por un mes" },
@@ -26,9 +64,13 @@ const benefits = [
 ];
 
 const donationSchema = z.object({
-  name: z.string().trim().min(1, "El nombre es requerido").max(100, "Nombre muy largo"),
+  firstName: z.string().trim().min(1, "Los nombres son requeridos").max(50, "Nombres muy largos"),
+  lastName: z.string().trim().min(1, "Los apellidos son requeridos").max(50, "Apellidos muy largos"),
   email: z.string().trim().email("Correo inválido").max(255, "Correo muy largo"),
   phone: z.string().trim().max(20, "Teléfono muy largo").optional(),
+  nit: z.string().trim().max(15, "NIT muy largo").optional(),
+  city: z.string().trim().max(100, "Ciudad muy larga").optional(),
+  department: z.string().trim().max(50, "Departamento muy largo").optional(),
   amount: z.number().min(1, "El monto debe ser mayor a 0"),
 });
 
@@ -40,15 +82,29 @@ const Donar = () => {
   const [customAmount, setCustomAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"tarjeta" | "transferencia">("tarjeta");
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
+    nit: "",
+    city: "",
+    department: "",
   });
 
   const finalAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate address fields for card payments
+    if (paymentMethod === "tarjeta" && (!formData.city || !formData.department)) {
+      toast({
+        title: "Campos requeridos",
+        description: "Para pagos con tarjeta, la ciudad y departamento son obligatorios.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const validation = donationSchema.safeParse({
       ...formData,
@@ -70,9 +126,14 @@ const Donar = () => {
       const { data, error } = await supabase.functions.invoke("send-email", {
         body: {
           type: "donation",
-          name: formData.name,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
           phone: formData.phone || undefined,
+          nit: formData.nit || undefined,
+          city: formData.city || undefined,
+          department: formData.department || undefined,
           amount: finalAmount,
           donationType,
           paymentMethod,
@@ -87,7 +148,15 @@ const Donar = () => {
       });
 
       // Reset form
-      setFormData({ name: "", email: "", phone: "" });
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        nit: "",
+        city: "",
+        department: "",
+      });
       setSelectedAmount(null);
       setCustomAmount("");
     } catch (error: any) {
@@ -198,18 +267,31 @@ const Donar = () => {
                 <div className="space-y-4 mb-6">
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="donor-name">Nombre completo</Label>
+                      <Label htmlFor="donor-firstName">Nombres *</Label>
                       <Input
-                        id="donor-name"
-                        placeholder="Tu nombre"
-                        value={formData.name}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                        id="donor-firstName"
+                        placeholder="Tus nombres"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, firstName: e.target.value }))}
                         disabled={isSubmitting}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="donor-email">Correo electrónico</Label>
+                      <Label htmlFor="donor-lastName">Apellidos *</Label>
+                      <Input
+                        id="donor-lastName"
+                        placeholder="Tus apellidos"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, lastName: e.target.value }))}
+                        disabled={isSubmitting}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="donor-email">Correo electrónico *</Label>
                       <Input
                         id="donor-email"
                         type="email"
@@ -220,16 +302,74 @@ const Donar = () => {
                         required
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="donor-phone">Teléfono</Label>
+                      <Input
+                        id="donor-phone"
+                        placeholder="+502 0000-0000"
+                        value={formData.phone}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                        disabled={isSubmitting}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="donor-phone">Teléfono</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="donor-nit">NIT</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs">Opcional. Proporciona tu NIT para recibir un recibo deducible de impuestos.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input
-                      id="donor-phone"
-                      placeholder="+502 0000-0000"
-                      value={formData.phone}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                      id="donor-nit"
+                      placeholder="Ej: 12345678-9 o CF"
+                      value={formData.nit}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, nit: e.target.value }))}
                       disabled={isSubmitting}
                     />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="donor-city">
+                        Ciudad {paymentMethod === "tarjeta" && "*"}
+                      </Label>
+                      <Input
+                        id="donor-city"
+                        placeholder="Tu ciudad"
+                        value={formData.city}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, city: e.target.value }))}
+                        disabled={isSubmitting}
+                        required={paymentMethod === "tarjeta"}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="donor-department">
+                        Departamento {paymentMethod === "tarjeta" && "*"}
+                      </Label>
+                      <Select
+                        value={formData.department}
+                        onValueChange={(value) => setFormData((prev) => ({ ...prev, department: value }))}
+                        disabled={isSubmitting}
+                      >
+                        <SelectTrigger id="donor-department">
+                          <SelectValue placeholder="Selecciona departamento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {guatemalaDepartments.map((dept) => (
+                            <SelectItem key={dept} value={dept}>
+                              {dept}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
