@@ -101,13 +101,16 @@ async function generateAuthHeaders(
   const signature = await generateSignature(CYBERSOURCE_SECRET_KEY, signatureString);
 
   const signatureHeader = `keyid="${CYBERSOURCE_KEY_ID}", algorithm="HmacSHA256", headers="${headersToSign}", signature="${signature}"`;
+  console.log("Signature header prepared (len):", signatureHeader.length);
 
+  // Cybersource examples use capitalized header names. Fetch is case-insensitive, but we match docs.
   return {
-    host: CYBERSOURCE_HOST,
-    date: date,
-    digest: digest,
+    Host: CYBERSOURCE_HOST,
+    Date: date,
+    Digest: digest,
     "v-c-merchant-id": CYBERSOURCE_MERCHANT_ID,
-    signature: signatureHeader,
+    Signature: signatureHeader,
+    Accept: "application/json",
     "Content-Type": "application/json",
   };
 }
