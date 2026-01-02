@@ -42,16 +42,27 @@ async function generateDigest(payload: string): Promise<string> {
   return `SHA-256=${toBase64(new Uint8Array(hashBuffer))}`;
 }
 
+// Decode base64 safely
+function fromBase64(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
 // Generate HMAC-SHA256 signature
 async function generateSignature(
   secretKey: string,
   signatureString: string
 ): Promise<string> {
   const encoder = new TextEncoder();
-  const keyData = Uint8Array.from(atob(secretKey), (c) => c.charCodeAt(0));
+  // Decode the base64 secret key
+  const keyData = fromBase64(secretKey);
   const key = await crypto.subtle.importKey(
     "raw",
-    keyData,
+    keyData.buffer as ArrayBuffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -105,15 +116,27 @@ async function generateAuthHeaders(
 function buildPaymentRequest(data: PaymentRequest): object {
   const referenceCode = `DON-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
+  // Clean card number (remove spaces and dashes)
+  const cleanCardNumber = data.cardNumber.replace(/[\s-]/g, "");
+  
+  // Ensure expiration year is in correct format (2 or 4 digits)
+  let expYear = data.expirationYear;
+  if (expYear.length === 4) {
+    expYear = expYear.slice(-2); // Get last 2 digits
+  }
+
+  // Ensure expiration month is 2 digits
+  const expMonth = data.expirationMonth.padStart(2, "0");
+
   return {
     clientReferenceInformation: {
       code: referenceCode,
     },
     paymentInformation: {
       card: {
-        number: data.cardNumber,
-        expirationMonth: data.expirationMonth,
-        expirationYear: data.expirationYear,
+        number: cleanCardNumber,
+        expirationMonth: expMonth,
+        expirationYear: expYear,
         securityCode: data.cvv,
       },
     },
@@ -131,11 +154,11 @@ function buildPaymentRequest(data: PaymentRequest): object {
         locality: data.city,
         administrativeArea: data.department,
         country: "GT",
-        postalCode: "01001", // Default postal code for Guatemala
+        postalCode: "01001",
       },
     },
     processingInformation: {
-      capture: true, // Capture immediately
+      capture: true,
     },
   };
 }
