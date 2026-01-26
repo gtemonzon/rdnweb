@@ -32,8 +32,12 @@ const isAllowedStorageUrl = (rawUrl: string): boolean => {
     // Prevent open proxy: only allow our own storage host
     if (u.origin !== allowedOrigin) return false;
 
-    // Only allow public vacancies bucket path
-    if (!u.pathname.startsWith("/storage/v1/object/public/vacancies-docs/")) return false;
+    // Prevent open proxy: only allow specific public buckets
+    const allowedPrefixes = [
+      "/storage/v1/object/public/vacancies-docs/",
+      "/storage/v1/object/public/transparency-docs/",
+    ];
+    if (!allowedPrefixes.some((p) => u.pathname.startsWith(p))) return false;
 
     return true;
   } catch {

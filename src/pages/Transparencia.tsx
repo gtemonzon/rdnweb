@@ -36,6 +36,12 @@ const Transparencia = () => {
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<string>("all");
 
+  const getProxyUrl = (fileUrl: string) => {
+    const base = import.meta.env.VITE_SUPABASE_URL;
+    if (!base) return fileUrl;
+    return `${base}/functions/v1/file-proxy?url=${encodeURIComponent(fileUrl)}`;
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -204,8 +210,9 @@ const Transparencia = () => {
                                   {docs.map((doc) => (
                                     <a
                                       key={doc.id}
-                                      href={doc.file_url}
-                                      download
+                                      href={getProxyUrl(doc.file_url)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
                                       className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group cursor-pointer"
                                     >
                                       <div className="flex items-center gap-3 min-w-0">
@@ -223,7 +230,7 @@ const Transparencia = () => {
                                       </div>
                                       <span className="shrink-0 flex items-center text-sm text-muted-foreground group-hover:text-primary transition-colors">
                                         <Download className="w-4 h-4 mr-1" />
-                                        <span className="hidden sm:inline">Descargar</span>
+                                        <span className="hidden sm:inline">Abrir</span>
                                       </span>
                                     </a>
                                   ))}
