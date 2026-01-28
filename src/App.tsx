@@ -28,6 +28,7 @@ const AdminDonaciones = lazy(() => import("./pages/AdminDonaciones"));
 const AdminTransparencia = lazy(() => import("./pages/AdminTransparencia"));
 const Vacantes = lazy(() => import("./pages/Vacantes"));
 const AdminVacantes = lazy(() => import("./pages/AdminVacantes"));
+const AdminCybersource = lazy(() => import("./pages/AdminCybersource"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/admin/donaciones" element={<AdminDonaciones />} />
               <Route path="/admin/transparencia" element={<AdminTransparencia />} />
               <Route path="/admin/vacantes" element={<AdminVacantes />} />
+              <Route path="/admin/cybersource" element={<AdminCybersource />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

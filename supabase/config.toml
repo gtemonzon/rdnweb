@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.process-payment]
 verify_jwt = false
+
+[functions.emit-fel]
+verify_jwt = false
+
+[functions.cybersource-auth-test]
+verify_jwt = false
