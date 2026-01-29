@@ -79,13 +79,52 @@ async function generateSignature(
   };
 }
 
-// Generate HTTP Signature headers
-async function generateAuthHeaders(
+// Generate HTTP Signature headers for GET requests (no digest)
+async function generateGetAuthHeaders(
   merchantId: string,
   keyId: string,
   secretKey: string,
   host: string,
-  method: string,
+  resource: string
+): Promise<{ headers: Record<string, string>; debug: Record<string, unknown> }> {
+  const date = new Date().toUTCString();
+
+  const headersToSign = "(request-target) host date v-c-merchant-id";
+
+  const signatureString = [
+    `(request-target): get ${resource}`,
+    `host: ${host}`,
+    `date: ${date}`,
+    `v-c-merchant-id: ${merchantId}`,
+  ].join("\n");
+
+  const { signature, keyFormat } = await generateSignature(secretKey, signatureString);
+
+  const signatureHeader = `keyid="${keyId}", algorithm="HmacSHA256", headers="${headersToSign}", signature="${signature}"`;
+
+  return {
+    headers: {
+      Host: host,
+      Date: date,
+      "v-c-merchant-id": merchantId,
+      Signature: signatureHeader,
+      Accept: "application/json",
+    },
+    debug: {
+      signatureString,
+      signatureStringLines: signatureString.split("\n"),
+      keyFormat,
+      date,
+    }
+  };
+}
+
+// Generate HTTP Signature headers for POST requests
+async function generatePostAuthHeaders(
+  merchantId: string,
+  keyId: string,
+  secretKey: string,
+  host: string,
   resource: string,
   payload: string
 ): Promise<{ headers: Record<string, string>; debug: Record<string, unknown> }> {
@@ -95,7 +134,7 @@ async function generateAuthHeaders(
   const headersToSign = "(request-target) host date digest v-c-merchant-id";
 
   const signatureString = [
-    `(request-target): ${method.toLowerCase()} ${resource}`,
+    `(request-target): post ${resource}`,
     `host: ${host}`,
     `date: ${date}`,
     `digest: ${digest}`,
@@ -122,7 +161,6 @@ async function generateAuthHeaders(
       keyFormat,
       digest,
       date,
-      signatureHeaderLength: signatureHeader.length,
     }
   };
 }
@@ -204,7 +242,71 @@ const handler = async (req: Request): Promise<Response> => {
     log(`🔑 Key ID: ${keyId} (length: ${keyId.length}, suffix: ...${keyId.slice(-6)})`);
     log(`🔑 Secret Key length: ${secretKey.length} chars`);
 
-    // Build a minimal test payload
+    // ========== STEP 1: Test credential validity with a GET endpoint ==========
+    log("\n📋 PASO 1: Verificando validez de credenciales...");
+    
+    const verifyResource = "/reporting/v3/report-definitions";
+    const { headers: verifyHeaders } = await generateGetAuthHeaders(
+      merchantId,
+      keyId,
+      secretKey,
+      host,
+      verifyResource
+    );
+
+    const verifyUrl = `https://${host}${verifyResource}`;
+    log(`🌐 Calling verification endpoint: ${verifyUrl}`);
+
+    const verifyResponse = await fetch(verifyUrl, {
+      method: "GET",
+      headers: verifyHeaders,
+    });
+
+    const verifyText = await verifyResponse.text();
+    log(`📨 Verification response status: ${verifyResponse.status}`);
+
+    let credentialsValid = false;
+    
+    if (verifyResponse.status === 401) {
+      log("❌ Credenciales inválidas (error 401 en endpoint de verificación)");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Credenciales inválidas (401 Unauthorized)",
+          errorType: "auth_failed",
+          status: 401,
+          logs,
+          debug: {
+            keyFormat: decodeSecretKey(secretKey).format,
+            merchantIdLength: merchantId.length,
+            keyIdLength: keyId.length,
+            secretKeyLength: secretKey.length,
+            environment,
+            host,
+          },
+          suggestions: [
+            "Verifica que el Merchant ID coincide exactamente (sin espacios, mayúsculas correctas)",
+            "Verifica que el Key ID es el API Key ID correcto del portal de Cybersource",
+            "Verifica que el Shared Secret Key fue copiado completamente (sin caracteres faltantes)",
+            `Confirma que las credenciales son para el ambiente ${environment}`,
+            "Revisa si las credenciales API han expirado o fueron regeneradas",
+            "Intenta regenerar nuevas credenciales API en el portal de Cybersource",
+          ],
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else if (verifyResponse.ok || verifyResponse.status === 200) {
+      credentialsValid = true;
+      log("✅ Credenciales válidas (verificación exitosa)");
+    } else {
+      // Other status codes - credentials might still be valid
+      log(`⚠️ Verification endpoint returned ${verifyResponse.status}, proceeding with payment test...`);
+      credentialsValid = true; // Assume valid and test payment endpoint
+    }
+
+    // ========== STEP 2: Test payment endpoint ==========
+    log("\n💳 PASO 2: Probando endpoint de pagos...");
+
     const testPayload = {
       clientReferenceInformation: {
         code: `TEST-${Date.now()}`,
@@ -234,21 +336,20 @@ const handler = async (req: Request): Promise<Response> => {
         },
       },
       processingInformation: {
-        capture: false, // Auth only, no capture
+        capture: false,
       },
     };
 
     const payloadString = JSON.stringify(testPayload);
     log(`📦 Payload size: ${payloadString.length} bytes`);
 
-    const resource = "/pts/v2/payments";
-    const { headers: authHeaders, debug } = await generateAuthHeaders(
+    const paymentResource = "/pts/v2/payments";
+    const { headers: paymentHeaders, debug } = await generatePostAuthHeaders(
       merchantId,
       keyId,
       secretKey,
       host,
-      "POST",
-      resource,
+      paymentResource,
       payloadString
     );
 
@@ -257,20 +358,18 @@ const handler = async (req: Request): Promise<Response> => {
     (debug.signatureStringLines as string[]).forEach((line, i) => {
       log(`   ${i + 1}: ${line}`);
     });
-    log(`📋 Digest: ${debug.digest}`);
-    log(`📅 Date header: ${debug.date}`);
 
-    const cybersourceUrl = `https://${host}${resource}`;
-    log(`🌐 Calling: ${cybersourceUrl}`);
+    const paymentUrl = `https://${host}${paymentResource}`;
+    log(`🌐 Calling: ${paymentUrl}`);
 
-    const response = await fetch(cybersourceUrl, {
+    const paymentResponse = await fetch(paymentUrl, {
       method: "POST",
-      headers: authHeaders,
+      headers: paymentHeaders,
       body: payloadString,
     });
 
-    const responseText = await response.text();
-    log(`📨 Response status: ${response.status}`);
+    const responseText = await paymentResponse.text();
+    log(`📨 Payment response status: ${paymentResponse.status}`);
 
     let responseData;
     try {
@@ -279,15 +378,63 @@ const handler = async (req: Request): Promise<Response> => {
       responseData = { raw: responseText };
     }
 
-    if (response.status === 401) {
-      log(`❌ Authentication Failed`);
+    // Handle 404 - Service not enabled
+    if (paymentResponse.status === 404) {
+      log(`⚠️ Error 404: Servicio de pagos no habilitado`);
+      log(`📄 Response: ${JSON.stringify(responseData)}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Servicio REST API Payments no habilitado (404)",
+          errorType: "service_not_enabled",
+          status: 404,
+          credentialsValid,
+          response: responseData,
+          logs,
+          debug: {
+            keyFormat: debug.keyFormat,
+            merchantIdLength: merchantId.length,
+            keyIdLength: keyId.length,
+            secretKeyLength: secretKey.length,
+            environment,
+            host,
+            credentialsVerified: credentialsValid,
+          },
+          visanetInstructions: {
+            title: "Acción requerida: Contactar a VisaNet Guatemala",
+            message: "El servicio 'REST API Payments' no está habilitado para esta cuenta. Este servicio debe ser activado por VisaNet antes de poder procesar transacciones.",
+            steps: [
+              "Contacta a tu representante de VisaNet Guatemala",
+              "Solicita la activación del servicio 'REST API Payments' para tu cuenta sandbox",
+              "Menciona que usas una integración REST API directa (server-to-server) con HTTP Signature authentication",
+              `Especifica el endpoint que necesitas: POST /pts/v2/payments`,
+              `Proporciona tu Merchant ID: ${merchantId}`,
+            ],
+            technicalNote: "Las credenciales parecen ser válidas, pero el endpoint de pagos retorna 404 porque el servicio no ha sido habilitado por el proveedor.",
+          },
+          suggestions: [
+            "Contacta a VisaNet Guatemala para solicitar la activación del servicio 'REST API Payments'",
+            "Confirma que tu cuenta sandbox tiene habilitada la integración REST API directa",
+            "Pregunta específicamente por el endpoint POST /pts/v2/payments",
+            "Este NO es un problema de credenciales, es una configuración de cuenta pendiente",
+          ],
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Handle 401 on payment endpoint specifically
+    if (paymentResponse.status === 401) {
+      log(`❌ Authentication Failed on payment endpoint`);
       log(`📄 Response: ${JSON.stringify(responseData)}`);
       
       return new Response(
         JSON.stringify({
           success: false,
           error: "Authentication Failed (401)",
-          status: response.status,
+          errorType: "auth_failed",
+          status: 401,
           response: responseData,
           logs,
           debug: {
@@ -299,28 +446,29 @@ const handler = async (req: Request): Promise<Response> => {
             host,
           },
           suggestions: [
-            "Verify that the Merchant ID matches exactly (no spaces, correct case)",
-            "Verify that the Key ID is the correct API Key ID from Cybersource portal",
-            "Verify that the Shared Secret Key was copied completely (no missing characters)",
-            `Confirm credentials are for the ${environment} environment`,
-            "Check if the API credentials have expired or been regenerated",
-            "Try regenerating new API credentials in the Cybersource portal",
+            "Verifica que el Merchant ID coincide exactamente (sin espacios, mayúsculas correctas)",
+            "Verifica que el Key ID es el API Key ID correcto del portal de Cybersource",
+            "Verifica que el Shared Secret Key fue copiado completamente",
+            `Confirma que las credenciales son para el ambiente ${environment}`,
+            "Revisa si las credenciales API han expirado o fueron regeneradas",
           ],
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (response.ok || response.status === 201) {
-      log(`✅ Authentication Successful!`);
+    // Success cases
+    if (paymentResponse.ok || paymentResponse.status === 201) {
+      log(`✅ ¡Autenticación y prueba de pago exitosas!`);
       log(`📄 Transaction ID: ${responseData.id || "N/A"}`);
       log(`📄 Status: ${responseData.status || "N/A"}`);
       
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Authentication successful! Credentials are valid.",
-          status: response.status,
+          message: "¡Autenticación exitosa! Las credenciales son válidas y el servicio de pagos está habilitado.",
+          errorType: null,
+          status: paymentResponse.status,
           transactionId: responseData.id,
           paymentStatus: responseData.status,
           logs,
@@ -328,6 +476,8 @@ const handler = async (req: Request): Promise<Response> => {
             keyFormat: debug.keyFormat,
             environment,
             host,
+            credentialsVerified: true,
+            paymentServiceEnabled: true,
           },
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -335,26 +485,29 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Other errors
-    log(`⚠️ Unexpected response: ${response.status}`);
+    log(`⚠️ Unexpected response: ${paymentResponse.status}`);
     log(`📄 Response: ${JSON.stringify(responseData)}`);
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: `Unexpected response: ${response.status}`,
-        status: response.status,
+        error: `Respuesta inesperada: ${paymentResponse.status}`,
+        errorType: "unexpected",
+        status: paymentResponse.status,
         response: responseData,
         logs,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error: any) {
-    log(`💥 Error: ${error.message}`);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log(`💥 Error: ${errorMessage}`);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: errorMessage,
+        errorType: "exception",
         logs,
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

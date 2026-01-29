@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, TestTube, Loader2, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, Copy, RefreshCw } from "lucide-react";
+import { ArrowLeft, TestTube, Loader2, CheckCircle, XCircle, AlertTriangle, Eye, EyeOff, Copy, RefreshCw, Phone, Mail, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,17 +12,27 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
+interface VisaNetInstructions {
+  title: string;
+  message: string;
+  steps: string[];
+  technicalNote: string;
+}
+
 interface TestResult {
   success: boolean;
   error?: string;
+  errorType?: "auth_failed" | "service_not_enabled" | "unexpected" | "exception" | null;
   message?: string;
   status?: number;
+  credentialsValid?: boolean;
   transactionId?: string;
   paymentStatus?: string;
   response?: Record<string, unknown>;
   logs: string[];
   debug?: Record<string, unknown>;
   suggestions?: string[];
+  visanetInstructions?: VisaNetInstructions;
 }
 
 const AdminCybersource = () => {
@@ -80,7 +90,13 @@ const AdminCybersource = () => {
       if (data.success) {
         toast({
           title: "¡Autenticación exitosa!",
-          description: "Las credenciales son válidas.",
+          description: "Las credenciales son válidas y el servicio de pagos está habilitado.",
+        });
+      } else if (data.errorType === "service_not_enabled") {
+        toast({
+          title: "Servicio no habilitado",
+          description: "Contacta a VisaNet para activar el servicio REST API Payments.",
+          variant: "destructive",
         });
       } else {
         toast({
@@ -89,16 +105,18 @@ const AdminCybersource = () => {
           variant: "destructive",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Error al ejecutar la prueba";
       console.error("Test error:", error);
       setResult({
         success: false,
-        error: error.message || "Error al ejecutar la prueba",
+        error: errorMessage,
+        errorType: "exception",
         logs: [],
       });
       toast({
         title: "Error",
-        description: error.message || "Error al ejecutar la prueba.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -236,6 +254,8 @@ const AdminCybersource = () => {
               <CardTitle className="flex items-center gap-2">
                 {result.success ? (
                   <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : result.errorType === "service_not_enabled" ? (
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
                 ) : (
                   <XCircle className="h-5 w-5 text-red-500" />
                 )}
@@ -248,7 +268,7 @@ const AdminCybersource = () => {
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <AlertTitle className="text-green-700 dark:text-green-300">¡Autenticación exitosa!</AlertTitle>
                   <AlertDescription className="text-green-600 dark:text-green-400">
-                    Las credenciales son válidas. Puedes proceder a actualizar los secretos del proyecto.
+                    Las credenciales son válidas y el servicio de pagos está habilitado. Puedes proceder a actualizar los secretos del proyecto.
                     {result.transactionId && (
                       <div className="mt-2">
                         <strong>Transaction ID:</strong> {result.transactionId}
@@ -256,6 +276,92 @@ const AdminCybersource = () => {
                     )}
                   </AlertDescription>
                 </Alert>
+              ) : result.errorType === "service_not_enabled" && result.visanetInstructions ? (
+                <>
+                  {/* Credentials valid indicator */}
+                  {result.credentialsValid && (
+                    <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <AlertTitle className="text-green-700 dark:text-green-300">Credenciales válidas</AlertTitle>
+                      <AlertDescription className="text-green-600 dark:text-green-400">
+                        Las credenciales de autenticación son correctas.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Service not enabled alert */}
+                  <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-700 dark:text-amber-300">
+                      {result.visanetInstructions.title}
+                    </AlertTitle>
+                    <AlertDescription className="text-amber-600 dark:text-amber-400">
+                      {result.visanetInstructions.message}
+                    </AlertDescription>
+                  </Alert>
+
+                  {/* VisaNet Contact Instructions */}
+                  <Card className="border-2 border-amber-200 dark:border-amber-800">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Phone className="h-5 w-5 text-amber-600" />
+                        Pasos para activar el servicio
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ol className="list-decimal list-inside space-y-2 text-sm">
+                        {result.visanetInstructions.steps.map((step, i) => (
+                          <li key={i} className="leading-relaxed">{step}</li>
+                        ))}
+                      </ol>
+
+                      <div className="rounded-lg bg-muted p-4 mt-4">
+                        <div className="flex items-start gap-2">
+                          <FileText className="h-5 w-5 text-muted-foreground mt-0.5" />
+                          <div>
+                            <p className="font-medium text-sm">Nota técnica</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {result.visanetInstructions.technicalNote}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const emailBody = `Estimados,
+
+Solicito la activación del servicio "REST API Payments" para nuestra cuenta de ${environment === "test" ? "sandbox/pruebas" : "producción"}.
+
+Detalles de la integración:
+- Merchant ID: ${merchantId}
+- Tipo de integración: REST API directa (server-to-server)
+- Autenticación: HTTP Signature (HMAC-SHA256)
+- Endpoint requerido: POST /pts/v2/payments
+
+Actualmente recibimos un error 404 "Resource not found" al intentar acceder al endpoint de pagos.
+
+Agradezco su pronta atención.
+
+Saludos cordiales.`;
+                            
+                            navigator.clipboard.writeText(emailBody);
+                            toast({
+                              title: "Plantilla copiada",
+                              description: "Puedes pegarla en un correo para VisaNet.",
+                            });
+                          }}
+                        >
+                          <Mail className="mr-2 h-4 w-4" />
+                          Copiar plantilla de correo
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
               ) : (
                 <Alert variant="destructive">
                   <XCircle className="h-4 w-4" />
@@ -295,12 +401,28 @@ const AdminCybersource = () => {
                       <span className="text-muted-foreground">Ambiente:</span>
                       <span className="font-mono">{result.debug.environment as string} ({result.debug.host as string})</span>
                     </div>
+                    {result.debug.credentialsVerified !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Credenciales verificadas:</span>
+                        <span className={result.debug.credentialsVerified ? "text-green-600" : "text-red-600"}>
+                          {result.debug.credentialsVerified ? "✓ Sí" : "✗ No"}
+                        </span>
+                      </div>
+                    )}
+                    {result.debug.paymentServiceEnabled !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Servicio de pagos:</span>
+                        <span className={result.debug.paymentServiceEnabled ? "text-green-600" : "text-amber-600"}>
+                          {result.debug.paymentServiceEnabled ? "✓ Habilitado" : "⚠ No habilitado"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Suggestions */}
-              {result.suggestions && result.suggestions.length > 0 && (
+              {result.suggestions && result.suggestions.length > 0 && result.errorType !== "service_not_enabled" && (
                 <div className="rounded-lg border border-yellow-500 bg-yellow-50 dark:bg-yellow-950 p-4 space-y-2">
                   <h4 className="font-medium flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
                     <AlertTriangle className="h-4 w-4" />
