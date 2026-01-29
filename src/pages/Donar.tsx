@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info, Lock } from "lucide-react";
+import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info, Lock, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,12 +16,23 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Layout from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
-const donationAmounts = [50, 100, 250, 500, 1000];
+type Currency = "GTQ" | "USD";
+
+const donationAmountsGTQ = [50, 100, 250, 500, 1000];
+const donationAmountsUSD = [10, 25, 50, 100, 200];
 
 const guatemalaDepartments = [
   "Alta Verapaz",
@@ -48,12 +59,20 @@ const guatemalaDepartments = [
   "Zacapa",
 ];
 
-const impactItems = [
+const impactItemsGTQ = [
   { amount: "Q50", description: "Material educativo para un niño por un mes" },
   { amount: "Q100", description: "Atención psicológica para una sesión" },
   { amount: "Q250", description: "Kit de higiene para una familia" },
   { amount: "Q500", description: "Beca escolar por un mes" },
   { amount: "Q1,000", description: "Apoyo alimentario familiar por un mes" },
+];
+
+const impactItemsUSD = [
+  { amount: "$10", description: "Material educativo para un niño por un mes" },
+  { amount: "$25", description: "Atención psicológica para una sesión" },
+  { amount: "$50", description: "Kit de higiene para una familia" },
+  { amount: "$100", description: "Beca escolar por un mes" },
+  { amount: "$200", description: "Apoyo alimentario familiar por un mes" },
 ];
 
 const benefits = [
@@ -94,9 +113,12 @@ const cardSchema = z.object({
 const Donar = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [currency, setCurrency] = useState<Currency>("GTQ");
   const [donationType, setDonationType] = useState<"unica" | "mensual">("unica");
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
+  const [customAmountError, setCustomAmountError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"tarjeta" | "transferencia">("tarjeta");
   const [formData, setFormData] = useState({
     firstName: "",
@@ -114,6 +136,12 @@ const Donar = () => {
     cvv: "",
   });
 
+  const donationAmounts = currency === "GTQ" ? donationAmountsGTQ : donationAmountsUSD;
+  const impactItems = currency === "GTQ" ? impactItemsGTQ : impactItemsUSD;
+  const currencySymbol = currency === "GTQ" ? "Q" : "US$";
+  const currencyMultiple = currency === "GTQ" ? 50 : 10;
+  const minAmount = currencyMultiple;
+
   const finalAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
 
   const formatCardNumber = (value: string) => {
@@ -122,8 +150,44 @@ const Donar = () => {
     return groups ? groups.join(" ").substring(0, 19) : "";
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const validateCustomAmount = (value: string): string | null => {
+    if (!value) return null;
+    const amount = parseInt(value);
+    if (isNaN(amount) || amount < minAmount) {
+      return `El monto mínimo es ${currencySymbol}${minAmount}`;
+    }
+    if (amount % currencyMultiple !== 0) {
+      return `El monto debe ser múltiplo de ${currencySymbol}${currencyMultiple}`;
+    }
+    return null;
+  };
+
+  const handleCustomAmountChange = (value: string) => {
+    setCustomAmount(value);
+    setSelectedAmount(null);
+    const error = validateCustomAmount(value);
+    setCustomAmountError(error);
+  };
+
+  const handleCurrencyChange = (newCurrency: Currency) => {
+    setCurrency(newCurrency);
+    setSelectedAmount(null);
+    setCustomAmount("");
+    setCustomAmountError(null);
+  };
+
+  const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate custom amount
+    if (customAmount && customAmountError) {
+      toast({
+        title: "Monto inválido",
+        description: customAmountError,
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Validate address fields for card payments
     if (paymentMethod === "tarjeta" && (!formData.city || !formData.department)) {
@@ -162,6 +226,12 @@ const Donar = () => {
       }
     }
 
+    // Show confirmation dialog
+    setShowConfirmation(true);
+  };
+
+  const handleSubmit = async () => {
+    setShowConfirmation(false);
     setIsSubmitting(true);
 
     try {
@@ -177,6 +247,7 @@ const Donar = () => {
             city: formData.city,
             department: formData.department,
             amount: finalAmount,
+            currency,
             donationType,
             cardNumber: cardData.cardNumber.replace(/\s/g, ""),
             expirationMonth: cardData.expirationMonth,
@@ -209,6 +280,7 @@ const Donar = () => {
             city: formData.city || undefined,
             department: formData.department || undefined,
             amount: finalAmount,
+            currency,
             donationType,
             paymentMethod,
           },
@@ -240,6 +312,7 @@ const Donar = () => {
       });
       setSelectedAmount(null);
       setCustomAmount("");
+      setCustomAmountError(null);
     } catch (error: any) {
       console.error("Error processing donation:", error);
       toast({
@@ -250,6 +323,12 @@ const Donar = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const getMaskedCardNumber = () => {
+    const digits = cardData.cardNumber.replace(/\s/g, "");
+    if (digits.length < 4) return "****";
+    return `**** **** **** ${digits.slice(-4)}`;
   };
 
   return (
@@ -275,7 +354,38 @@ const Donar = () => {
             {/* Form */}
             <div className="bg-muted rounded-2xl p-8">
               <h2 className="font-heading text-2xl font-bold text-foreground mb-6">Hacer una donación</h2>
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handlePreSubmit}>
+                {/* Currency Selector */}
+                <div className="mb-6">
+                  <Label className="mb-3 block">Moneda</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleCurrencyChange("GTQ")}
+                      className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 font-medium transition-colors ${
+                        currency === "GTQ"
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      <span className="font-bold">Q</span>
+                      Quetzales
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCurrencyChange("USD")}
+                      className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 font-medium transition-colors ${
+                        currency === "USD"
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      <DollarSign className="w-5 h-5" />
+                      Dólares (US$)
+                    </button>
+                  </div>
+                </div>
+
                 {/* Donation Type */}
                 <div className="mb-6">
                   <Label className="mb-3 block">Tipo de donación</Label>
@@ -309,7 +419,9 @@ const Donar = () => {
 
                 {/* Amount Selection */}
                 <div className="mb-6">
-                  <Label className="mb-3 block">Monto (Quetzales)</Label>
+                  <Label className="mb-3 block">
+                    Monto ({currency === "GTQ" ? "Quetzales" : "Dólares US"})
+                  </Label>
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     {donationAmounts.map((amount) => (
                       <button
@@ -318,6 +430,7 @@ const Donar = () => {
                         onClick={() => {
                           setSelectedAmount(amount);
                           setCustomAmount("");
+                          setCustomAmountError(null);
                         }}
                         className={`p-3 rounded-lg border-2 font-semibold transition-colors ${
                           selectedAmount === amount
@@ -325,21 +438,31 @@ const Donar = () => {
                             : "border-border text-foreground hover:border-primary hover:bg-primary/5"
                         }`}
                       >
-                        Q{amount}
+                        {currencySymbol}{amount}
                       </button>
                     ))}
                     <div className="col-span-3">
-                      <Input
-                        type="number"
-                        placeholder="Otro monto"
-                        className="text-center font-semibold"
-                        value={customAmount}
-                        onChange={(e) => {
-                          setCustomAmount(e.target.value);
-                          setSelectedAmount(null);
-                        }}
-                        disabled={isSubmitting}
-                      />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                          {currencySymbol}
+                        </span>
+                        <Input
+                          type="number"
+                          placeholder={`Otro monto (múltiplos de ${currencyMultiple})`}
+                          className={`text-center font-semibold pl-10 ${customAmountError ? "border-destructive" : ""}`}
+                          value={customAmount}
+                          onChange={(e) => handleCustomAmountChange(e.target.value)}
+                          disabled={isSubmitting}
+                          min={minAmount}
+                          step={currencyMultiple}
+                        />
+                      </div>
+                      {customAmountError && (
+                        <p className="text-xs text-destructive mt-1">{customAmountError}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Mínimo: {currencySymbol}{minAmount} • Múltiplos de {currencySymbol}{currencyMultiple}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -564,7 +687,7 @@ const Donar = () => {
                   </div>
                 )}
 
-                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || finalAmount <= 0}>
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || finalAmount <= 0 || !!customAmountError}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -573,7 +696,7 @@ const Donar = () => {
                   ) : (
                     <>
                       <Heart className="w-5 h-5 mr-2" />
-                      Donar {finalAmount > 0 ? `Q${finalAmount}` : "Ahora"}
+                      Donar {finalAmount > 0 ? `${currencySymbol}${finalAmount}` : "Ahora"}
                     </>
                   )}
                 </Button>
@@ -648,6 +771,102 @@ const Donar = () => {
           </div>
         </div>
       </section>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Heart className="w-5 h-5 text-primary" />
+              Confirmar Donación
+            </DialogTitle>
+            <DialogDescription>
+              Por favor verifica los datos de tu donación antes de continuar.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Amount */}
+            <div className="flex justify-between items-center p-3 bg-primary/5 rounded-lg">
+              <span className="text-sm text-muted-foreground">Monto a donar</span>
+              <span className="font-heading font-bold text-2xl text-primary">
+                {currencySymbol}{finalAmount}
+              </span>
+            </div>
+
+            {/* Donation Details */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tipo de donación</span>
+                <span className="font-medium">{donationType === "unica" ? "Única" : "Mensual"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Método de pago</span>
+                <span className="font-medium">
+                  {paymentMethod === "tarjeta" ? "Tarjeta de crédito/débito" : "Transferencia bancaria"}
+                </span>
+              </div>
+              {paymentMethod === "tarjeta" && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tarjeta</span>
+                  <span className="font-medium font-mono">{getMaskedCardNumber()}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Donor Info */}
+            <div className="border-t pt-3 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Nombre</span>
+                <span className="font-medium">{formData.firstName} {formData.lastName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Correo</span>
+                <span className="font-medium">{formData.email}</span>
+              </div>
+              {formData.nit && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">NIT</span>
+                  <span className="font-medium">{formData.nit}</span>
+                </div>
+              )}
+              {formData.city && formData.department && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ubicación</span>
+                  <span className="font-medium">{formData.city}, {formData.department}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowConfirmation(false)}
+              className="w-full sm:w-auto"
+            >
+              Modificar datos
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Confirmar Donación
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
