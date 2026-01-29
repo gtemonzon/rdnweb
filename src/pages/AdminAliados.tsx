@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Loader2, ExternalLink, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, ExternalLink, GripVertical, ArrowLeft } from "lucide-react";
 
 interface Partner {
   id: string;
@@ -141,7 +141,7 @@ const AdminAliados = () => {
   return (
     <Layout>
       <div className="container py-12">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-start mb-8">
           <div>
             <h1 className="font-heading text-3xl font-bold text-foreground">
               Gestión de Aliados
@@ -150,12 +150,19 @@ const AdminAliados = () => {
               Administra los socios cooperantes del sitio web
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="w-4 h-4 mr-2" /> Nuevo Aliado
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/admin">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver
+              </Link>
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()}>
+                  <Plus className="w-4 h-4 mr-2" /> Nuevo Aliado
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>{editingPartner ? "Editar Aliado" : "Nuevo Aliado"}</DialogTitle>
@@ -174,8 +181,9 @@ const AdminAliados = () => {
                 }}
                 isSaving={createMutation.isPending || updateMutation.isPending}
               />
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {isLoading ? (
