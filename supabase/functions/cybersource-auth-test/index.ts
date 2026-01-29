@@ -80,6 +80,7 @@ async function generateSignature(
 }
 
 // Generate HTTP Signature headers for GET requests (no digest)
+// FIXED: Order matches Cybersource documentation: host date (request-target) v-c-merchant-id
 async function generateGetAuthHeaders(
   merchantId: string,
   keyId: string,
@@ -89,12 +90,13 @@ async function generateGetAuthHeaders(
 ): Promise<{ headers: Record<string, string>; debug: Record<string, unknown> }> {
   const date = new Date().toUTCString();
 
-  const headersToSign = "(request-target) host date v-c-merchant-id";
+  // Order: host date (request-target) v-c-merchant-id (per Cybersource docs)
+  const headersToSign = "host date (request-target) v-c-merchant-id";
 
   const signatureString = [
-    `(request-target): get ${resource}`,
     `host: ${host}`,
     `date: ${date}`,
+    `(request-target): get ${resource}`,
     `v-c-merchant-id: ${merchantId}`,
   ].join("\n");
 
@@ -115,11 +117,13 @@ async function generateGetAuthHeaders(
       signatureStringLines: signatureString.split("\n"),
       keyFormat,
       date,
+      headersOrder: headersToSign,
     }
   };
 }
 
 // Generate HTTP Signature headers for POST requests
+// FIXED: Order matches Cybersource documentation: host date (request-target) digest v-c-merchant-id
 async function generatePostAuthHeaders(
   merchantId: string,
   keyId: string,
@@ -131,12 +135,13 @@ async function generatePostAuthHeaders(
   const date = new Date().toUTCString();
   const digest = await generateDigest(payload);
 
-  const headersToSign = "(request-target) host date digest v-c-merchant-id";
+  // Order: host date (request-target) digest v-c-merchant-id (per Cybersource docs)
+  const headersToSign = "host date (request-target) digest v-c-merchant-id";
 
   const signatureString = [
-    `(request-target): post ${resource}`,
     `host: ${host}`,
     `date: ${date}`,
+    `(request-target): post ${resource}`,
     `digest: ${digest}`,
     `v-c-merchant-id: ${merchantId}`,
   ].join("\n");
@@ -161,6 +166,7 @@ async function generatePostAuthHeaders(
       keyFormat,
       digest,
       date,
+      headersOrder: headersToSign,
     }
   };
 }
@@ -178,7 +184,7 @@ const handler = async (req: Request): Promise<Response> => {
   };
 
   try {
-    log("🚀 Starting Cybersource authentication test...");
+    log("🚀 Starting Cybersource authentication test (v2 - fixed header order)...");
 
     // Verify admin role
     const authHeader = req.headers.get("Authorization");
@@ -246,7 +252,7 @@ const handler = async (req: Request): Promise<Response> => {
     log("\n📋 PASO 1: Verificando validez de credenciales...");
     
     const verifyResource = "/reporting/v3/report-definitions";
-    const { headers: verifyHeaders } = await generateGetAuthHeaders(
+    const { headers: verifyHeaders, debug: verifyDebug } = await generateGetAuthHeaders(
       merchantId,
       keyId,
       secretKey,
@@ -256,6 +262,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const verifyUrl = `https://${host}${verifyResource}`;
     log(`🌐 Calling verification endpoint: ${verifyUrl}`);
+    log(`📝 Headers order: ${verifyDebug.headersOrder}`);
+    log(`📝 Signature string:`);
+    (verifyDebug.signatureStringLines as string[]).forEach((line, i) => {
+      log(`   ${i + 1}: ${line}`);
+    });
 
     const verifyResponse = await fetch(verifyUrl, {
       method: "GET",
@@ -283,6 +294,7 @@ const handler = async (req: Request): Promise<Response> => {
             secretKeyLength: secretKey.length,
             environment,
             host,
+            headersOrder: verifyDebug.headersOrder,
           },
           suggestions: [
             "Verifica que el Merchant ID coincide exactamente (sin espacios, mayúsculas correctas)",
@@ -315,8 +327,9 @@ const handler = async (req: Request): Promise<Response> => {
         card: {
           number: "4111111111111111",
           expirationMonth: "12",
-          expirationYear: "26",
+          expirationYear: "2026",
           securityCode: "123",
+          type: "001", // Visa
         },
       },
       orderInformation: {
@@ -354,6 +367,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     log(`🔐 Key format detected: ${debug.keyFormat}`);
+    log(`📝 Headers order: ${debug.headersOrder}`);
     log(`📝 Signature string (lines):`);
     (debug.signatureStringLines as string[]).forEach((line, i) => {
       log(`   ${i + 1}: ${line}`);
@@ -378,10 +392,11 @@ const handler = async (req: Request): Promise<Response> => {
       responseData = { raw: responseText };
     }
 
+    log(`📄 Response: ${JSON.stringify(responseData)}`);
+
     // Handle 404 - Service not enabled
     if (paymentResponse.status === 404) {
       log(`⚠️ Error 404: Servicio de pagos no habilitado`);
-      log(`📄 Response: ${JSON.stringify(responseData)}`);
       
       return new Response(
         JSON.stringify({
@@ -400,24 +415,27 @@ const handler = async (req: Request): Promise<Response> => {
             environment,
             host,
             credentialsVerified: credentialsValid,
+            headersOrder: debug.headersOrder,
           },
           visanetInstructions: {
-            title: "Acción requerida: Contactar a VisaNet Guatemala",
-            message: "El servicio 'REST API Payments' no está habilitado para esta cuenta. Este servicio debe ser activado por VisaNet antes de poder procesar transacciones.",
+            title: "Acción requerida: Contactar a NeoNet/VisaNet Guatemala",
+            message: "El servicio 'REST API Payments' no está habilitado para esta cuenta. Este servicio debe ser activado por el proveedor antes de poder procesar transacciones.",
             steps: [
-              "Contacta a tu representante de VisaNet Guatemala",
-              "Solicita la activación del servicio 'REST API Payments' para tu cuenta sandbox",
+              "Contacta a tu representante de NeoNet/VisaNet Guatemala",
+              "Solicita la activación del servicio 'REST API Payments' para tu cuenta",
               "Menciona que usas una integración REST API directa (server-to-server) con HTTP Signature authentication",
-              `Especifica el endpoint que necesitas: POST /pts/v2/payments`,
+              `Especifica el endpoint que necesitas: POST https://${host}/pts/v2/payments`,
               `Proporciona tu Merchant ID: ${merchantId}`,
+              "Pregunta si tu cuenta tiene habilitada la integración REST API o solo SOAP/Simple Order API",
             ],
-            technicalNote: "Las credenciales parecen ser válidas, pero el endpoint de pagos retorna 404 porque el servicio no ha sido habilitado por el proveedor.",
+            technicalNote: "Las credenciales parecen ser válidas, pero el endpoint de pagos retorna 404 porque el servicio no ha sido habilitado por el proveedor. Es posible que tu cuenta solo tenga habilitado SOAP/Simple Order API.",
           },
           suggestions: [
-            "Contacta a VisaNet Guatemala para solicitar la activación del servicio 'REST API Payments'",
-            "Confirma que tu cuenta sandbox tiene habilitada la integración REST API directa",
+            "Contacta a NeoNet/VisaNet Guatemala para solicitar la activación del servicio 'REST API Payments'",
+            "Confirma que tu cuenta tiene habilitada la integración REST API directa (no solo SOAP)",
             "Pregunta específicamente por el endpoint POST /pts/v2/payments",
             "Este NO es un problema de credenciales, es una configuración de cuenta pendiente",
+            "Es posible que tu sitio actual (refugiodelaninez.org) use SOAP API que es diferente a REST API",
           ],
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -427,7 +445,6 @@ const handler = async (req: Request): Promise<Response> => {
     // Handle 401 on payment endpoint specifically
     if (paymentResponse.status === 401) {
       log(`❌ Authentication Failed on payment endpoint`);
-      log(`📄 Response: ${JSON.stringify(responseData)}`);
       
       return new Response(
         JSON.stringify({
@@ -444,6 +461,7 @@ const handler = async (req: Request): Promise<Response> => {
             secretKeyLength: secretKey.length,
             environment,
             host,
+            headersOrder: debug.headersOrder,
           },
           suggestions: [
             "Verifica que el Merchant ID coincide exactamente (sin espacios, mayúsculas correctas)",
@@ -478,15 +496,42 @@ const handler = async (req: Request): Promise<Response> => {
             host,
             credentialsVerified: true,
             paymentServiceEnabled: true,
+            headersOrder: debug.headersOrder,
           },
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Other errors
-    log(`⚠️ Unexpected response: ${paymentResponse.status}`);
-    log(`📄 Response: ${JSON.stringify(responseData)}`);
+    // Other errors - might include DECLINED which is actually a success (auth worked)
+    log(`⚠️ Response status: ${paymentResponse.status}`);
+
+    // Check if it's a valid response even if not 2xx (e.g., DECLINED is still a valid response)
+    if (responseData.status && ["AUTHORIZED", "DECLINED", "PENDING", "INVALID_REQUEST"].includes(responseData.status)) {
+      log(`✅ API responding correctly - transaction status: ${responseData.status}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: `¡La API está respondiendo correctamente! Status de transacción: ${responseData.status}`,
+          errorType: null,
+          status: paymentResponse.status,
+          transactionId: responseData.id,
+          paymentStatus: responseData.status,
+          response: responseData,
+          logs,
+          debug: {
+            keyFormat: debug.keyFormat,
+            environment,
+            host,
+            credentialsVerified: true,
+            paymentServiceEnabled: true,
+            headersOrder: debug.headersOrder,
+          },
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(
       JSON.stringify({
@@ -496,13 +541,20 @@ const handler = async (req: Request): Promise<Response> => {
         status: paymentResponse.status,
         response: responseData,
         logs,
+        debug: {
+          keyFormat: debug.keyFormat,
+          environment,
+          host,
+          headersOrder: debug.headersOrder,
+        },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    log(`💥 Error: ${errorMessage}`);
+    log(`❌ Error: ${errorMessage}`);
+    
     return new Response(
       JSON.stringify({
         success: false,
