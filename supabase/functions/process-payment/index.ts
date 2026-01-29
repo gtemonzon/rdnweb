@@ -12,6 +12,60 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Rate limiting: Track payment attempts per IP
+const paymentAttempts = new Map<string, { count: number; firstAttempt: number }>();
+const MAX_PAYMENTS_PER_HOUR = 5;
+const HOUR_IN_MS = 60 * 60 * 1000;
+
+function getClientIp(req: Request): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number } {
+  const now = Date.now();
+  const record = paymentAttempts.get(ip);
+
+  if (!record) {
+    paymentAttempts.set(ip, { count: 1, firstAttempt: now });
+    return { allowed: true, remaining: MAX_PAYMENTS_PER_HOUR - 1 };
+  }
+
+  // Reset if hour has passed
+  if (now - record.firstAttempt > HOUR_IN_MS) {
+    paymentAttempts.set(ip, { count: 1, firstAttempt: now });
+    return { allowed: true, remaining: MAX_PAYMENTS_PER_HOUR - 1 };
+  }
+
+  // Check if within limit
+  if (record.count >= MAX_PAYMENTS_PER_HOUR) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  record.count++;
+  return { allowed: true, remaining: MAX_PAYMENTS_PER_HOUR - record.count };
+}
+
+// Validate email format
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 255;
+}
+
+// Check for disposable email domains
+const DISPOSABLE_DOMAINS = [
+  "tempmail.com", "throwaway.com", "mailinator.com", "guerrillamail.com",
+  "10minutemail.com", "temp-mail.org", "fakeinbox.com", "trashmail.com"
+];
+
+function isDisposableEmail(email: string): boolean {
+  const domain = email.split("@")[1]?.toLowerCase();
+  return DISPOSABLE_DOMAINS.some(d => domain?.includes(d));
+}
+
 // Cybersource configuration
 const CYBERSOURCE_HOST = "apitest.cybersource.com"; // Use api.cybersource.com for production
 const CYBERSOURCE_MERCHANT_ID = Deno.env.get("CYBERSOURCE_MERCHANT_ID") || "";
@@ -192,7 +246,22 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log("Processing payment request...");
+    // Rate limiting check
+    const clientIp = getClientIp(req);
+    const rateLimit = checkRateLimit(clientIp);
+    
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for IP: ${clientIp}`);
+      return new Response(
+        JSON.stringify({ 
+          error: "Demasiados intentos de pago. Por favor espera una hora antes de intentar de nuevo.",
+          status: "RATE_LIMITED" 
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Processing payment request from IP: ${clientIp} (${rateLimit.remaining} attempts remaining)`);
 
     // Validate required environment variables
     if (!CYBERSOURCE_MERCHANT_ID || !CYBERSOURCE_KEY_ID || !CYBERSOURCE_SECRET_KEY) {
@@ -214,6 +283,30 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const data: PaymentRequest = await req.json();
+
+    // Enhanced input validation
+    if (!isValidEmail(data.email)) {
+      return new Response(
+        JSON.stringify({ error: "Correo electrónico inválido", status: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (isDisposableEmail(data.email)) {
+      console.warn(`Disposable email attempt: ${data.email}`);
+      return new Response(
+        JSON.stringify({ error: "No se permiten correos electrónicos temporales", status: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate amount range (reasonable donation limits)
+    if (data.amount < 1 || data.amount > 100000) {
+      return new Response(
+        JSON.stringify({ error: "Monto de donación fuera de rango permitido", status: "VALIDATION_ERROR" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     console.log("Payment request data:", {
       firstName: data.firstName,
       lastName: data.lastName,
