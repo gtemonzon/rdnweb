@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.cybersource-auth-test]
 verify_jwt = false
+
+[functions.upload-receipt]
+verify_jwt = false

@@ -280,31 +280,33 @@ const Donar = () => {
           throw new Error(data?.message || "Error al procesar el pago");
         }
       } else {
-        // Upload transfer receipt first
+        // Upload transfer receipt via secure edge function
         if (!transferReceipt) {
           throw new Error("No se ha adjuntado la boleta de transferencia");
         }
 
         setIsUploadingReceipt(true);
-        const fileExt = transferReceipt.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
+        // Create form data for secure upload
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", transferReceipt);
+        uploadFormData.append("email", formData.email);
+        uploadFormData.append("name", `${formData.firstName} ${formData.lastName}`);
 
-        const { error: uploadError } = await supabase.storage
-          .from("transfer-receipts")
-          .upload(fileName, transferReceipt, {
-            cacheControl: "3600",
-            upsert: false,
-          });
+        const { data: uploadData, error: uploadError } = await supabase.functions.invoke(
+          "upload-receipt",
+          {
+            body: uploadFormData,
+          }
+        );
 
-        if (uploadError) {
-          console.error("Error uploading receipt:", uploadError);
-          throw new Error("Error al subir la boleta. Por favor intenta de nuevo.");
+        if (uploadError || !uploadData?.success) {
+          console.error("Error uploading receipt:", uploadError || uploadData?.error);
+          throw new Error(uploadData?.error || "Error al subir la boleta. Por favor intenta de nuevo.");
         }
 
-        // Get public URL for the receipt
-        const { data: publicUrlData } = supabase.storage
-          .from("transfer-receipts")
-          .getPublicUrl(fileName);
+        const fileName = uploadData.fileName;
+        const receiptUrl = uploadData.signedUrl;
 
         setIsUploadingReceipt(false);
 
@@ -325,7 +327,7 @@ const Donar = () => {
             donationType,
             paymentMethod,
             receiptFileName: fileName,
-            receiptUrl: publicUrlData.publicUrl,
+            receiptUrl: receiptUrl,
           },
         });
 
