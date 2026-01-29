@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, Plus, Trash2, Loader2 } from "lucide-react";
+import { Save, Plus, Trash2, Loader2, ArrowLeft } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 
 interface StatItem {
@@ -98,13 +98,21 @@ const AdminContenido = () => {
   return (
     <Layout>
       <div className="container py-12">
-        <div className="mb-8">
-          <h1 className="font-heading text-3xl font-bold text-foreground">
-            Gestión de Contenido
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Administra el contenido estático del sitio web
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="font-heading text-3xl font-bold text-foreground">
+              Gestión de Contenido
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Administra el contenido estático del sitio web
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link to="/admin">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver
+            </Link>
+          </Button>
         </div>
 
         <Tabs defaultValue="stats" className="space-y-6">
