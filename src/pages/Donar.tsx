@@ -735,19 +735,37 @@ const Donar = () => {
 
               {/* Bank Info */}
               <div className="mt-8 p-6 rounded-xl border border-border">
-                <h3 className="font-heading font-semibold text-foreground mb-3">Datos para transferencia</h3>
+                <h3 className="font-heading font-semibold text-foreground mb-4">Datos para transferencia</h3>
+                
+                {/* Banco Industrial */}
+                <div className="space-y-2 text-sm text-muted-foreground mb-4 pb-4 border-b border-border">
+                  <p>
+                    <strong className="text-foreground">Banco:</strong> Banco Industrial
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Cuenta:</strong> 000-031978-0
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Nombre:</strong> El Refugio de la Niñez ONG
+                  </p>
+                  <p>
+                    <strong className="text-foreground">Tipo:</strong> Monetaria Quetzales
+                  </p>
+                </div>
+
+                {/* Banrural */}
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <p>
-                    <strong>Banco:</strong> Banco Industrial
+                    <strong className="text-foreground">Banco:</strong> Banrural
                   </p>
                   <p>
-                    <strong>Cuenta:</strong> 000-031978-0
+                    <strong className="text-foreground">Cuenta:</strong> 4445211205
                   </p>
                   <p>
-                    <strong>Nombre:</strong> El Refugio de la Niñez ONG
+                    <strong className="text-foreground">Nombre:</strong> El Refugio de la Niñez ONG
                   </p>
                   <p>
-                    <strong>Tipo:</strong> Monetaria Quetzales
+                    <strong className="text-foreground">Tipo:</strong> Ahorros Quetzales
                   </p>
                 </div>
               </div>
