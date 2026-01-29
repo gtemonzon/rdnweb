@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info, Lock, DollarSign } from "lucide-react";
+import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info, Lock, DollarSign, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,7 @@ import Layout from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import TransferReceiptUpload from "@/components/TransferReceiptUpload";
 
 type Currency = "GTQ" | "USD";
 
@@ -135,6 +136,8 @@ const Donar = () => {
     expirationYear: "",
     cvv: "",
   });
+  const [transferReceipt, setTransferReceipt] = useState<File | null>(null);
+  const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
   const donationAmounts = currency === "GTQ" ? donationAmountsGTQ : donationAmountsUSD;
   const impactItems = currency === "GTQ" ? impactItemsGTQ : impactItemsUSD;
@@ -194,6 +197,16 @@ const Donar = () => {
       toast({
         title: "Campos requeridos",
         description: "Para pagos con tarjeta, la ciudad y departamento son obligatorios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate transfer receipt is required for transfer method
+    if (paymentMethod === "transferencia" && !transferReceipt) {
+      toast({
+        title: "Boleta requerida",
+        description: "Por favor adjunta la boleta de tu transferencia para continuar.",
         variant: "destructive",
       });
       return;
@@ -267,10 +280,38 @@ const Donar = () => {
           throw new Error(data?.message || "Error al procesar el pago");
         }
       } else {
-        // Send email for bank transfer
+        // Upload transfer receipt first
+        if (!transferReceipt) {
+          throw new Error("No se ha adjuntado la boleta de transferencia");
+        }
+
+        setIsUploadingReceipt(true);
+        const fileExt = transferReceipt.name.split(".").pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("transfer-receipts")
+          .upload(fileName, transferReceipt, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error("Error uploading receipt:", uploadError);
+          throw new Error("Error al subir la boleta. Por favor intenta de nuevo.");
+        }
+
+        // Get public URL for the receipt
+        const { data: publicUrlData } = supabase.storage
+          .from("transfer-receipts")
+          .getPublicUrl(fileName);
+
+        setIsUploadingReceipt(false);
+
+        // Send email with receipt info
         const { data, error } = await supabase.functions.invoke("send-email", {
           body: {
-            type: "donation",
+            type: "transfer-donation",
             firstName: formData.firstName,
             lastName: formData.lastName,
             name: `${formData.firstName} ${formData.lastName}`,
@@ -283,14 +324,16 @@ const Donar = () => {
             currency,
             donationType,
             paymentMethod,
+            receiptFileName: fileName,
+            receiptUrl: publicUrlData.publicUrl,
           },
         });
 
         if (error) throw error;
 
         toast({
-          title: "¡Gracias por tu generosidad!",
-          description: "Hemos recibido tu intención de donación. Te enviaremos un correo con los detalles.",
+          title: "¡Gracias por tu donación!",
+          description: "Hemos recibido tu boleta. Contabilidad verificará tu transferencia y emitirá tu recibo.",
         });
       }
 
@@ -310,6 +353,7 @@ const Donar = () => {
         expirationYear: "",
         cvv: "",
       });
+      setTransferReceipt(null);
       setSelectedAmount(null);
       setCustomAmount("");
       setCustomAmountError(null);
@@ -322,6 +366,7 @@ const Donar = () => {
       });
     } finally {
       setIsSubmitting(false);
+      setIsUploadingReceipt(false);
     }
   };
 
@@ -687,7 +732,26 @@ const Donar = () => {
                   </div>
                 )}
 
-                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || finalAmount <= 0 || !!customAmountError}>
+                {/* Transfer Receipt Upload - Only show when payment method is transfer */}
+                {paymentMethod === "transferencia" && (
+                  <div className="mb-6 p-4 rounded-lg border-2 border-secondary/30 bg-secondary/5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Upload className="w-4 h-4 text-secondary-foreground" />
+                      <span className="text-sm font-medium text-secondary-foreground">Comprobante de transferencia *</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Adjunta la boleta de tu transferencia para que Contabilidad pueda verificar y emitir tu recibo de donación.
+                    </p>
+                    <TransferReceiptUpload
+                      file={transferReceipt}
+                      onFileChange={setTransferReceipt}
+                      isUploading={isUploadingReceipt}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                )}
+
+                <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || finalAmount <= 0 || !!customAmountError || (paymentMethod === "transferencia" && !transferReceipt)}>
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -828,6 +892,14 @@ const Donar = () => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tarjeta</span>
                   <span className="font-medium font-mono">{getMaskedCardNumber()}</span>
+                </div>
+              )}
+              {paymentMethod === "transferencia" && transferReceipt && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Boleta adjunta</span>
+                  <span className="font-medium text-secondary-foreground truncate max-w-[150px]">
+                    {transferReceipt.name}
+                  </span>
                 </div>
               )}
             </div>

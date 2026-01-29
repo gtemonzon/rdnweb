@@ -25,15 +25,23 @@ const getCorsHeaders = (origin: string | null): Record<string, string> => {
 };
 
 interface EmailRequest {
-  type: "contact" | "donation";
+  type: "contact" | "donation" | "transfer-donation";
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone?: string;
   subject?: string;
   message?: string;
   amount?: number;
+  currency?: string;
   donationType?: "unica" | "mensual";
   paymentMethod?: "tarjeta" | "transferencia";
+  nit?: string;
+  city?: string;
+  department?: string;
+  receiptFileName?: string;
+  receiptUrl?: string;
   honeypot?: string; // Honeypot field for bot detection
 }
 
@@ -46,11 +54,13 @@ const validateEmailData = (data: EmailRequest): { valid: boolean; error?: string
   }
 
   // Validate required fields
-  if (!data.type || !["contact", "donation"].includes(data.type)) {
+  if (!data.type || !["contact", "donation", "transfer-donation"].includes(data.type)) {
     return { valid: false, error: "Invalid email type" };
   }
 
-  if (!data.name || data.name.trim().length < 2 || data.name.length > 100) {
+  // For transfer-donation, name might come from firstName + lastName
+  const nameToValidate = data.name || `${data.firstName || ""} ${data.lastName || ""}`.trim();
+  if (!nameToValidate || nameToValidate.length < 2 || nameToValidate.length > 100) {
     return { valid: false, error: "Name must be between 2 and 100 characters" };
   }
 
@@ -75,7 +85,7 @@ const validateEmailData = (data: EmailRequest): { valid: boolean; error?: string
     }
   }
 
-  if (data.type === "donation") {
+  if (data.type === "donation" || data.type === "transfer-donation") {
     if (!data.amount || data.amount < 1 || data.amount > 1000000) {
       return { valid: false, error: "Invalid donation amount" };
     }
@@ -301,6 +311,86 @@ const handler = async (req: Request): Promise<Response> => {
               <p>Nombre: El Refugio de la Niñez ONG</p>
             </div>
             ` : ""}
+            <p>Atentamente,<br><strong>El Refugio de la Niñez</strong></p>
+          </div>
+        `,
+      });
+    } else if (emailData.type === "transfer-donation") {
+      // Handle transfer donation with receipt
+      const donationTypeText = emailData.donationType === "mensual" ? "Mensual" : "Única";
+      const currencySymbol = emailData.currency === "USD" ? "US$" : "Q";
+      const sanitizedNit = emailData.nit ? sanitizeString(emailData.nit.trim()) : "No proporcionado";
+      const sanitizedCity = emailData.city ? sanitizeString(emailData.city.trim()) : "";
+      const sanitizedDepartment = emailData.department ? sanitizeString(emailData.department.trim()) : "";
+      const location = sanitizedCity && sanitizedDepartment ? `${sanitizedCity}, ${sanitizedDepartment}` : "No proporcionada";
+
+      console.log("Sending transfer donation notification to accounting...");
+      // Send to donations email (which is the same as smtpUsername or could be a dedicated donations email)
+      await client.send({
+        from: smtpUsername,
+        to: "donaciones@refugiodelaninez.org",
+        subject: `🏦 Nueva donación por transferencia: ${currencySymbol}${emailData.amount} - Pendiente de verificación`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #F68A33;">Nueva donación por transferencia bancaria</h2>
+            <p style="background: #fff3cd; padding: 12px; border-radius: 8px; border-left: 4px solid #ffc107;">
+              <strong>⏳ Estado:</strong> Pendiente de verificación
+            </p>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #333;">Datos del donante</h3>
+              <p><strong>Nombre:</strong> ${sanitizedName}</p>
+              <p><strong>Correo:</strong> ${sanitizedEmail}</p>
+              ${sanitizedPhone ? `<p><strong>Teléfono:</strong> ${sanitizedPhone}</p>` : ""}
+              <p><strong>NIT:</strong> ${sanitizedNit}</p>
+              <p><strong>Ubicación:</strong> ${location}</p>
+            </div>
+            
+            <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #0067B1;">Detalles de la donación</h3>
+              <p><strong>Monto:</strong> <span style="font-size: 1.5em; color: #0067B1;">${currencySymbol}${emailData.amount}</span></p>
+              <p><strong>Tipo:</strong> ${donationTypeText}</p>
+              <p><strong>Método:</strong> Transferencia bancaria</p>
+            </div>
+            
+            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #2e7d32;">📎 Boleta adjunta</h3>
+              <p>El donante ha adjuntado una boleta de transferencia:</p>
+              <p><strong>Archivo:</strong> ${emailData.receiptFileName || "boleta.pdf"}</p>
+              <p style="margin-top: 15px;">
+                <a href="${emailData.receiptUrl}" style="background: #2e7d32; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                  📥 Ver/Descargar Boleta
+                </a>
+              </p>
+            </div>
+            
+            <div style="background: #fff8e1; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>📋 Siguiente paso:</strong> Verificar la transferencia en el estado de cuenta bancario y emitir el recibo de donación correspondiente.</p>
+            </div>
+          </div>
+        `,
+      });
+
+      console.log("Sending confirmation to donor...");
+      await client.send({
+        from: smtpUsername,
+        to: sanitizedEmail,
+        subject: "Hemos recibido tu boleta de transferencia - El Refugio de la Niñez",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #0067B1;">¡Gracias por tu donación!</h2>
+            <p>Hola ${sanitizedName},</p>
+            <p>Hemos recibido correctamente tu boleta de transferencia. Nuestro equipo de contabilidad verificará el depósito y te enviaremos tu recibo de donación una vez confirmado.</p>
+            
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p><strong>Monto:</strong> ${currencySymbol}${emailData.amount}</p>
+              <p><strong>Tipo:</strong> ${donationTypeText}</p>
+              <p><strong>Método:</strong> Transferencia bancaria</p>
+              <p><strong>Estado:</strong> Pendiente de verificación</p>
+            </div>
+            
+            <p>Tu apoyo nos permite continuar protegiendo a niños, niñas y adolescentes que más lo necesitan.</p>
+            
             <p>Atentamente,<br><strong>El Refugio de la Niñez</strong></p>
           </div>
         `,
