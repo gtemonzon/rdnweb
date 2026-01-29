@@ -149,6 +149,7 @@ async function generateSignature(
 }
 
 // Generate HTTP Signature headers for Cybersource
+// FIXED: Order matches Cybersource documentation: host date (request-target) digest v-c-merchant-id
 async function generateAuthHeaders(
   method: string,
   resource: string,
@@ -157,14 +158,14 @@ async function generateAuthHeaders(
   const date = new Date().toUTCString();
   const digest = await generateDigest(payload);
 
-  // Headers to sign for POST requests
-  const headersToSign = "(request-target) host date digest v-c-merchant-id";
+  // Headers to sign for POST requests - order per Cybersource docs
+  const headersToSign = "host date (request-target) digest v-c-merchant-id";
 
-  // Build signature string
+  // Build signature string - must match headers order
   const signatureString = [
-    `(request-target): ${method.toLowerCase()} ${resource}`,
     `host: ${CYBERSOURCE_HOST}`,
     `date: ${date}`,
+    `(request-target): ${method.toLowerCase()} ${resource}`,
     `digest: ${digest}`,
     `v-c-merchant-id: ${CYBERSOURCE_MERCHANT_ID}`,
   ].join("\n");
