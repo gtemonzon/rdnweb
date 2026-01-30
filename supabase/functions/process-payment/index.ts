@@ -439,6 +439,63 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           console.log("Donation saved to database");
         }
+
+        // Send email notification via EmailJS
+        if (paymentStatus === "AUTHORIZED") {
+          try {
+            const serviceId = Deno.env.get("EMAILJS_SERVICE_ID");
+            const donationTemplateId = Deno.env.get("EMAILJS_DONATION_TEMPLATE_ID") || Deno.env.get("EMAILJS_TEMPLATE_ID");
+            const publicKey = Deno.env.get("EMAILJS_PUBLIC_KEY");
+            const privateKey = Deno.env.get("EMAILJS_PRIVATE_KEY");
+
+            if (serviceId && donationTemplateId && publicKey && privateKey) {
+              const donationTypeText = data.donationType === "mensual" ? "Mensual" : "Única";
+              const currencySymbol = "Q"; // GTQ for card payments
+              
+              const emailjsPayload = {
+                service_id: serviceId,
+                template_id: donationTemplateId,
+                user_id: publicKey,
+                accessToken: privateKey,
+                template_params: {
+                  from_name: `${data.firstName} ${data.lastName}`,
+                  from_email: data.email,
+                  phone: data.phone || "No proporcionado",
+                  subject: `Nueva donación con tarjeta: ${currencySymbol}${data.amount}`,
+                  message: `
+Donación procesada exitosamente:
+- Monto: ${currencySymbol}${data.amount}
+- Tipo: ${donationTypeText}
+- Método: Tarjeta de crédito/débito
+- NIT: ${data.nit || "CF"}
+- Ubicación: ${data.city}, ${data.department}
+- Transaction ID: ${responseData.id || "N/A"}
+                  `.trim(),
+                  reply_to: data.email,
+                },
+              };
+
+              console.log("Sending donation notification via EmailJS...");
+              const emailResponse = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(emailjsPayload),
+              });
+
+              if (emailResponse.ok) {
+                console.log("Donation notification email sent successfully");
+              } else {
+                const errorText = await emailResponse.text();
+                console.error("EmailJS error:", errorText);
+              }
+            } else {
+              console.log("EmailJS not fully configured, skipping email notification");
+            }
+          } catch (emailError) {
+            console.error("Error sending email notification:", emailError);
+            // Don't fail the payment if email fails
+          }
+        }
       } catch (dbError) {
         console.error("Database error:", dbError);
         // Don't fail the payment if DB save fails
