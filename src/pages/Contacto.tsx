@@ -9,6 +9,7 @@ import ContactMap from "@/components/ContactMap";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { sendContactEmail, isEmailJSConfigured } from "@/lib/emailjs";
 import { z } from "zod";
 
 interface ContactInfo {
@@ -102,18 +103,31 @@ const Contacto = () => {
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: {
-          type: "contact",
-          name: formData.name,
-          email: formData.email,
+      // Try EmailJS first (client-side, no domain verification needed)
+      if (isEmailJSConfigured()) {
+        await sendContactEmail({
+          from_name: formData.name,
+          from_email: formData.email,
           phone: formData.phone || undefined,
           subject: formData.subject,
           message: formData.message,
-        },
-      });
+          reply_to: formData.email,
+        });
+      } else {
+        // Fallback to Edge Function (requires SMTP configured)
+        const { error } = await supabase.functions.invoke("send-email", {
+          body: {
+            type: "contact",
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || undefined,
+            subject: formData.subject,
+            message: formData.message,
+          },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       toast({
         title: "¡Mensaje enviado!",
