@@ -56,11 +56,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send via EmailJS REST API
+    // Get private key for server-side calls
+    const privateKey = Deno.env.get("EMAILJS_PRIVATE_KEY");
+    
+    if (!privateKey) {
+      console.error("EmailJS private key missing");
+      return new Response(
+        JSON.stringify({ error: "Email service not fully configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Send via EmailJS REST API (server-side requires accessToken)
     const emailjsPayload = {
       service_id: serviceId,
       template_id: templateId,
       user_id: publicKey,
+      accessToken: privateKey,
       template_params: {
         from_name: data.name,
         from_email: data.email,
@@ -71,7 +83,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
     };
 
-    console.log("Sending to EmailJS API...");
+    console.log("Sending to EmailJS API with private key...");
 
     const emailjsResponse = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
       method: "POST",
