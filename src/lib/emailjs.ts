@@ -8,7 +8,14 @@ const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "";
 
 // Check if EmailJS is configured
 export const isEmailJSConfigured = (): boolean => {
-  return Boolean(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
+  const configured = Boolean(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
+  console.log("EmailJS Config Check:", {
+    configured,
+    hasServiceId: Boolean(EMAILJS_SERVICE_ID),
+    hasTemplateId: Boolean(EMAILJS_TEMPLATE_ID),
+    hasPublicKey: Boolean(EMAILJS_PUBLIC_KEY),
+  });
+  return configured;
 };
 
 export interface ContactEmailParams {
@@ -36,7 +43,10 @@ export interface DonationEmailParams {
  * Send contact form email using EmailJS
  */
 export const sendContactEmail = async (params: ContactEmailParams): Promise<void> => {
+  console.log("sendContactEmail called with:", params);
+  
   if (!isEmailJSConfigured()) {
+    console.error("EmailJS not configured - throwing error");
     throw new Error("EmailJS no está configurado. Contacta al administrador.");
   }
 
@@ -49,15 +59,24 @@ export const sendContactEmail = async (params: ContactEmailParams): Promise<void
     reply_to: params.reply_to,
   };
 
-  const response = await emailjs.send(
-    EMAILJS_SERVICE_ID,
-    EMAILJS_TEMPLATE_ID,
-    templateParams,
-    EMAILJS_PUBLIC_KEY
-  );
+  console.log("Sending email with templateParams:", templateParams);
 
-  if (response.status !== 200) {
-    throw new Error("Error al enviar el correo");
+  try {
+    const response = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      templateParams,
+      EMAILJS_PUBLIC_KEY
+    );
+
+    console.log("EmailJS response:", response);
+
+    if (response.status !== 200) {
+      throw new Error("Error al enviar el correo");
+    }
+  } catch (error) {
+    console.error("EmailJS send error:", error);
+    throw error;
   }
 };
 
