@@ -51,7 +51,7 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, currency, reference_number, locale, donor_email, donor_first_name, donor_last_name, test_mode } = await req.json();
+    const { amount, currency, reference_number, locale, donor_email, donor_first_name, donor_last_name, bill_address1, bill_city, bill_country, test_mode } = await req.json();
 
     if (!amount || !currency) {
       return new Response(
@@ -91,6 +91,9 @@ serve(async (req) => {
       "bill_to_email",
       "bill_to_forename",
       "bill_to_surname",
+      "bill_to_address_line1",
+      "bill_to_address_city",
+      "bill_to_address_country",
     ].join(",");
 
     const params: Record<string, string> = {
@@ -108,6 +111,9 @@ serve(async (req) => {
       bill_to_email: donor_email || "",
       bill_to_forename: donor_first_name || "",
       bill_to_surname: donor_last_name || "",
+      bill_to_address_line1: bill_address1 || "",
+      bill_to_address_city: bill_city || "",
+      bill_to_address_country: bill_country || "GT",
     };
 
     const signature = await signFields(secretKey, signedFieldNames, params);

@@ -112,6 +112,7 @@ const Donar = () => {
     email: "",
     phone: "",
     nit: "",
+    address: "",
     city: "",
     department: "",
   });
@@ -167,10 +168,10 @@ const Donar = () => {
     }
 
     // Validate address fields for card payments
-    if (paymentMethod === "tarjeta" && (!formData.city || !formData.department)) {
+    if (paymentMethod === "tarjeta" && (!formData.address || !formData.city || !formData.department)) {
       toast({
         title: "Campos requeridos",
-        description: "Para pagos con tarjeta, la ciudad y departamento son obligatorios.",
+        description: "Para pagos con tarjeta, la dirección, ciudad y departamento son obligatorios.",
         variant: "destructive",
       });
       return;
@@ -223,6 +224,9 @@ const Donar = () => {
             donor_email: formData.email,
             donor_first_name: formData.firstName,
             donor_last_name: formData.lastName,
+            bill_address1: formData.address,
+            bill_city: formData.city,
+            bill_country: "GT",
             test_mode: true, // Change to false for production
           },
         });
@@ -313,6 +317,7 @@ const Donar = () => {
         email: "",
         phone: "",
         nit: "",
+        address: "",
         city: "",
         department: "",
       });
@@ -541,6 +546,19 @@ const Donar = () => {
                       value={formData.nit}
                       onChange={(e) => setFormData((prev) => ({ ...prev, nit: e.target.value }))}
                       disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="donor-address">
+                      Dirección {paymentMethod === "tarjeta" && "*"}
+                    </Label>
+                    <Input
+                      id="donor-address"
+                      placeholder="Tu dirección"
+                      value={formData.address}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
+                      disabled={isSubmitting}
+                      required={paymentMethod === "tarjeta"}
                     />
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
