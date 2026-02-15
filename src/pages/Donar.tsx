@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info, Lock, DollarSign, Upload } from "lucide-react";
+import { Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info, Lock, DollarSign, Upload, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,22 +94,7 @@ const donationSchema = z.object({
   amount: z.number().min(1, "El monto debe ser mayor a 0"),
 });
 
-const cardSchema = z.object({
-  cardNumber: z.string()
-    .min(13, "Número de tarjeta inválido")
-    .max(19, "Número de tarjeta inválido")
-    .regex(/^[0-9\s]+$/, "Solo se permiten números"),
-  expirationMonth: z.string()
-    .length(2, "Mes inválido")
-    .regex(/^(0[1-9]|1[0-2])$/, "Mes debe ser 01-12"),
-  expirationYear: z.string()
-    .length(4, "Año inválido")
-    .regex(/^20[2-9][0-9]$/, "Año inválido"),
-  cvv: z.string()
-    .min(3, "CVV inválido")
-    .max(4, "CVV inválido")
-    .regex(/^[0-9]+$/, "Solo se permiten números"),
-});
+// Card schema no longer needed - Secure Acceptance handles card data
 
 const Donar = () => {
   const { toast } = useToast();
@@ -130,12 +115,7 @@ const Donar = () => {
     city: "",
     department: "",
   });
-  const [cardData, setCardData] = useState({
-    cardNumber: "",
-    expirationMonth: "",
-    expirationYear: "",
-    cvv: "",
-  });
+  // Card data fields removed - Secure Acceptance handles card input on Cybersource hosted page
   const [transferReceipt, setTransferReceipt] = useState<File | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
@@ -146,12 +126,6 @@ const Donar = () => {
   const minAmount = currencyMultiple;
 
   const finalAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
-
-  const formatCardNumber = (value: string) => {
-    const digits = value.replace(/\D/g, "");
-    const groups = digits.match(/.{1,4}/g);
-    return groups ? groups.join(" ").substring(0, 19) : "";
-  };
 
   const validateCustomAmount = (value: string): string | null => {
     if (!value) return null;
@@ -226,19 +200,7 @@ const Donar = () => {
       return;
     }
 
-    // Validate card data if payment method is card
-    if (paymentMethod === "tarjeta") {
-      const cardValidation = cardSchema.safeParse(cardData);
-      if (!cardValidation.success) {
-        toast({
-          title: "Error en datos de tarjeta",
-          description: cardValidation.error.errors[0].message,
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
+    // No card validation needed - Secure Acceptance handles card data
     // Show confirmation dialog
     setShowConfirmation(true);
   };
@@ -249,36 +211,41 @@ const Donar = () => {
 
     try {
       if (paymentMethod === "tarjeta") {
-        // Process card payment via Cybersource
-        const { data, error } = await supabase.functions.invoke("process-payment", {
+        // Redirect to Cybersource Secure Acceptance Hosted Checkout
+        const referenceNumber = `DON-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+        const { data, error } = await supabase.functions.invoke("cybersource-sign", {
           body: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phone: formData.phone || undefined,
-            nit: formData.nit || undefined,
-            city: formData.city,
-            department: formData.department,
             amount: finalAmount,
-            currency,
-            donationType,
-            cardNumber: cardData.cardNumber.replace(/\s/g, ""),
-            expirationMonth: cardData.expirationMonth,
-            expirationYear: cardData.expirationYear,
-            cvv: cardData.cvv,
+            currency: currency === "GTQ" ? "GTQ" : "USD",
+            reference_number: referenceNumber,
+            locale: "es",
+            donor_email: formData.email,
+            donor_first_name: formData.firstName,
+            donor_last_name: formData.lastName,
+            test_mode: true, // Change to false for production
           },
         });
 
         if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || "Error al preparar el pago");
 
-        if (data?.status === "AUTHORIZED" || data?.status === "PENDING") {
-          toast({
-            title: "¡Pago procesado exitosamente!",
-            description: "Tu donación ha sido procesada. Recibirás un correo de confirmación.",
-          });
-        } else {
-          throw new Error(data?.message || "Error al procesar el pago");
+        // Create a hidden form and auto-submit to Cybersource
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = data.cybersource_url;
+
+        for (const [key, value] of Object.entries(data.fields)) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = key;
+          input.value = value as string;
+          form.appendChild(input);
         }
+
+        document.body.appendChild(form);
+        form.submit();
+        return; // Page will navigate away
       } else {
         // Upload transfer receipt via secure edge function
         if (!transferReceipt) {
@@ -339,7 +306,7 @@ const Donar = () => {
         });
       }
 
-      // Reset form
+      // Reset form (only for transfer - card redirects away)
       setFormData({
         firstName: "",
         lastName: "",
@@ -348,12 +315,6 @@ const Donar = () => {
         nit: "",
         city: "",
         department: "",
-      });
-      setCardData({
-        cardNumber: "",
-        expirationMonth: "",
-        expirationYear: "",
-        cvv: "",
       });
       setTransferReceipt(null);
       setSelectedAmount(null);
@@ -372,11 +333,7 @@ const Donar = () => {
     }
   };
 
-  const getMaskedCardNumber = () => {
-    const digits = cardData.cardNumber.replace(/\s/g, "");
-    if (digits.length < 4) return "****";
-    return `**** **** **** ${digits.slice(-4)}`;
-  };
+  // getMaskedCardNumber removed - Secure Acceptance handles card data
 
   return (
     <Layout>
@@ -655,80 +612,22 @@ const Donar = () => {
                   </div>
                 </div>
 
-                {/* Credit Card Fields - Only show when payment method is card */}
+                {/* Secure Acceptance Info - Only show when payment method is card */}
                 {paymentMethod === "tarjeta" && (
                   <div className="mb-6 p-4 rounded-lg border-2 border-primary/20 bg-primary/5">
                     <div className="flex items-center gap-2 mb-4">
                       <Lock className="w-4 h-4 text-primary" />
                       <span className="text-sm font-medium text-primary">Pago seguro</span>
                     </div>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="card-number">Número de tarjeta *</Label>
-                        <Input
-                          id="card-number"
-                          placeholder="1234 5678 9012 3456"
-                          value={cardData.cardNumber}
-                          onChange={(e) => setCardData((prev) => ({ 
-                            ...prev, 
-                            cardNumber: formatCardNumber(e.target.value) 
-                          }))}
-                          disabled={isSubmitting}
-                          maxLength={19}
-                          required
-                          autoComplete="cc-number"
-                        />
-                      </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="card-exp-month">Mes *</Label>
-                          <Input
-                            id="card-exp-month"
-                            placeholder="MM"
-                            value={cardData.expirationMonth}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, "").substring(0, 2);
-                              setCardData((prev) => ({ ...prev, expirationMonth: value }));
-                            }}
-                            disabled={isSubmitting}
-                            maxLength={2}
-                            required
-                            autoComplete="cc-exp-month"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="card-exp-year">Año *</Label>
-                          <Input
-                            id="card-exp-year"
-                            placeholder="AAAA"
-                            value={cardData.expirationYear}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, "").substring(0, 4);
-                              setCardData((prev) => ({ ...prev, expirationYear: value }));
-                            }}
-                            disabled={isSubmitting}
-                            maxLength={4}
-                            required
-                            autoComplete="cc-exp-year"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="card-cvv">CVV *</Label>
-                          <Input
-                            id="card-cvv"
-                            type="password"
-                            placeholder="123"
-                            value={cardData.cvv}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, "").substring(0, 4);
-                              setCardData((prev) => ({ ...prev, cvv: value }));
-                            }}
-                            disabled={isSubmitting}
-                            maxLength={4}
-                            required
-                            autoComplete="cc-csc"
-                          />
-                        </div>
+                    <div className="flex items-start gap-3">
+                      <ExternalLink className="w-5 h-5 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="text-sm text-muted-foreground">
+                        <p className="mb-1">
+                          Al confirmar, serás redirigido a la <strong className="text-foreground">página segura de Cybersource/VisaNet</strong> para ingresar los datos de tu tarjeta.
+                        </p>
+                        <p>
+                          Tus datos de tarjeta nunca pasan por nuestros servidores.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -892,8 +791,8 @@ const Donar = () => {
               </div>
               {paymentMethod === "tarjeta" && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tarjeta</span>
-                  <span className="font-medium font-mono">{getMaskedCardNumber()}</span>
+                  <span className="text-muted-foreground">Pago</span>
+                  <span className="font-medium text-primary">Redirección segura a Cybersource</span>
                 </div>
               )}
               {paymentMethod === "transferencia" && transferReceipt && (

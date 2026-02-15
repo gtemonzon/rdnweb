@@ -486,25 +486,91 @@ Saludos cordiales.`;
           </Card>
         )}
 
+        {/* Secure Acceptance Test */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TestTube className="h-5 w-5" />
+              Probar Secure Acceptance (Hosted Checkout)
+            </CardTitle>
+            <CardDescription>
+              Verifica que la Edge Function de firma está funcionando correctamente con los secretos configurados.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Esta prueba llama a la función <code className="bg-muted px-1 rounded">cybersource-sign</code> para verificar 
+              que los secretos <code className="bg-muted px-1 rounded">CYBERSOURCE_SA_PROFILE_ID</code>, 
+              <code className="bg-muted px-1 rounded">CYBERSOURCE_SA_ACCESS_KEY</code> y 
+              <code className="bg-muted px-1 rounded">CYBERSOURCE_SA_SECRET_KEY</code> están configurados.
+            </p>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  const { data, error } = await supabase.functions.invoke("cybersource-sign", {
+                    body: {
+                      amount: 1,
+                      currency: "GTQ",
+                      donor_email: "test@test.com",
+                      donor_first_name: "Test",
+                      donor_last_name: "User",
+                      test_mode: true,
+                    },
+                  });
+                  if (error) throw error;
+                  if (data?.success) {
+                    toast({
+                      title: "✅ Secure Acceptance funciona",
+                      description: `Profile ID: ${data.fields.profile_id.substring(0, 8)}... | Firma generada correctamente.`,
+                    });
+                  } else {
+                    toast({
+                      title: "Error",
+                      description: data?.error || "No se pudo generar la firma.",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (err: unknown) {
+                  toast({
+                    title: "Error de conexión",
+                    description: err instanceof Error ? err.message : "No se pudo contactar la función.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              <TestTube className="mr-2 h-4 w-4" />
+              Probar firma Secure Acceptance
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Instructions */}
         <Card>
           <CardHeader>
             <CardTitle>¿Cómo obtener las credenciales?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm text-muted-foreground">
+            <h4 className="font-medium text-foreground">REST API (Diagnóstico arriba)</h4>
             <ol className="list-decimal list-inside space-y-2">
               <li>Inicia sesión en el portal de VisaNet/Cybersource Business Center</li>
               <li>Navega a <strong>Payment Configuration → Key Management</strong></li>
               <li>Genera un nuevo conjunto de credenciales de API (REST API)</li>
               <li>Copia el <strong>Merchant ID</strong>, <strong>Key ID</strong> y <strong>Shared Secret Key</strong></li>
-              <li>Asegúrate de que las credenciales correspondan al ambiente correcto (Pruebas o Producción)</li>
+            </ol>
+            <h4 className="font-medium text-foreground mt-4">Secure Acceptance (Hosted Checkout)</h4>
+            <ol className="list-decimal list-inside space-y-2">
+              <li>En Business Center, navega a <strong>Payment Configuration → Secure Acceptance Settings</strong></li>
+              <li>Crea o edita un perfil de Secure Acceptance</li>
+              <li>Copia el <strong>Profile ID</strong>, <strong>Access Key</strong> y <strong>Secret Key</strong></li>
+              <li>En la configuración del perfil, establece las URLs de retorno y cancelación</li>
             </ol>
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Importante</AlertTitle>
               <AlertDescription>
-                Esta herramienta NO guarda las credenciales. Después de verificar que funcionan,
-                deberás actualizar los secretos del proyecto manualmente.
+                Los secretos de Secure Acceptance ya están guardados en el proyecto como variables de entorno seguras.
               </AlertDescription>
             </Alert>
           </CardContent>
