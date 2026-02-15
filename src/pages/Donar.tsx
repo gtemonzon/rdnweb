@@ -676,7 +676,7 @@ const Donar = () => {
             <aside className="lg:col-span-2 space-y-6">
               {/* Floating Summary (visible on all steps) */}
               {finalAmount > 0 && (
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 sticky top-24">
+                <div className="rounded-xl border border-primary/20 bg-card/50 backdrop-blur-sm p-5 sticky top-24">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2">Tu donación</p>
                   <div className="flex items-baseline gap-1 mb-1">
                     <span className="font-heading text-3xl font-bold text-primary">{currencySymbol}{finalAmount}</span>
