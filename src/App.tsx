@@ -29,6 +29,7 @@ const AdminTransparencia = lazy(() => import("./pages/AdminTransparencia"));
 const Vacantes = lazy(() => import("./pages/Vacantes"));
 const AdminVacantes = lazy(() => import("./pages/AdminVacantes"));
 const AdminCybersource = lazy(() => import("./pages/AdminCybersource"));
+const PaymentReturn = lazy(() => import("./pages/PaymentReturn"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -70,6 +71,8 @@ const App = () => (
               <Route path="/admin/transparencia" element={<AdminTransparencia />} />
               <Route path="/admin/vacantes" element={<AdminVacantes />} />
               <Route path="/admin/cybersource" element={<AdminCybersource />} />
+              <Route path="/pago/resultado" element={<PaymentReturn />} />
+              <Route path="/pago/cancelado" element={<PaymentReturn />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

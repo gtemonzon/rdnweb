@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.upload-receipt]
 verify_jwt = false
+
+[functions.cybersource-sign]
+verify_jwt = false
