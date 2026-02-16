@@ -101,16 +101,13 @@ const PaymentReturn = () => {
     if (status !== "success" || notifiedRef.current) return;
     if (!details.amount || !details.reference) return;
 
-    // Backend already sent it?
-    const alreadyNotified = searchParams.get("notified") === "1";
-    // SessionStorage dedup
+    // SessionStorage dedup only — do NOT trust URL "notified" param
     const emailKey = `emailed_${details.reference}`;
     const alreadyEmailed = sessionStorage.getItem(emailKey) === "true";
 
-    if (alreadyNotified || alreadyEmailed) {
-      console.log("[PaymentReturn] Skipping notify-donation (already sent)", {
-        alreadyNotified,
-        alreadyEmailed,
+    if (alreadyEmailed) {
+      console.log("[PaymentReturn] Skipping notify-donation (already emailed via sessionStorage)", {
+        reference: details.reference,
       });
       notifiedRef.current = true;
       return;
@@ -131,7 +128,7 @@ const PaymentReturn = () => {
       date: new Date().toLocaleString("es-GT"),
     };
 
-    console.log("[PaymentReturn] Invoking notify-donation with payload:", payload);
+    console.log("[PaymentReturn] Calling notify-donation now...", payload);
 
     supabase.functions
       .invoke("notify-donation", { body: payload })
@@ -139,7 +136,7 @@ const PaymentReturn = () => {
         if (error) {
           console.error("[PaymentReturn] notify-donation FAILED:", error);
         } else {
-          console.log("[PaymentReturn] notify-donation SUCCESS:", data);
+          console.log("[PaymentReturn] notify-donation response:", data);
           sessionStorage.setItem(emailKey, "true");
         }
       })
