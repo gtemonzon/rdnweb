@@ -6,11 +6,19 @@ import Layout from "@/components/layout/Layout";
 
 const GraciasDonacion = () => {
   const [searchParams] = useSearchParams();
-  const name = searchParams.get("name") || "Donante";
-  const amount = searchParams.get("amount") || "";
-  const currency = searchParams.get("currency") || "GTQ";
-  const reference = searchParams.get("reference") || "";
-  const date = searchParams.get("date") || new Date().toLocaleDateString("es-GT");
+
+  // Read from query params first, fallback to sessionStorage
+  let fallback: Record<string, string> = {};
+  try {
+    const stored = sessionStorage.getItem("lastDonation");
+    if (stored) fallback = JSON.parse(stored);
+  } catch (_) {}
+
+  const name = searchParams.get("name") || fallback.name || "Donante";
+  const amount = searchParams.get("amount") || fallback.amount || "";
+  const currency = searchParams.get("currency") || fallback.currency || "GTQ";
+  const reference = searchParams.get("reference") || fallback.reference || "";
+  const date = searchParams.get("date") || fallback.date || new Date().toLocaleDateString("es-GT");
 
   const currencySymbol = currency === "USD" ? "US$" : "Q";
 

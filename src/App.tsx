@@ -74,6 +74,8 @@ const App = () => (
               <Route path="/admin/cybersource" element={<AdminCybersource />} />
               <Route path="/pago/resultado" element={<PaymentReturn />} />
               <Route path="/pago/cancelado" element={<PaymentReturn />} />
+              <Route path="/payment-return" element={<PaymentReturn />} />
+              <Route path="/resultado" element={<PaymentReturn />} />
               <Route path="/gracias" element={<GraciasDonacion />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
