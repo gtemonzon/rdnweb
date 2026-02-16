@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/layout/Layout";
 import { supabase } from "@/integrations/supabase/client";
+import { sendDevDonationEmailJS } from "@/lib/emailjs-donation";
 
 type PaymentStatus = "success" | "declined" | "error" | "cancelled" | "loading";
 
@@ -141,6 +142,16 @@ const PaymentReturn = () => {
         }
       })
       .finally(() => setEmailSending(false));
+
+    // DEV-ONLY: Send donor email via EmailJS (skipped in production)
+    sendDevDonationEmailJS({
+      donor_name: details.donorName || "Donante anónimo",
+      donor_email: details.donorEmail || "",
+      amount: details.amount,
+      currency: details.currency || "GTQ",
+      reference_number: details.reference,
+      transaction_id: details.transactionId || "",
+    });
   }, [status, details, searchParams]);
 
   const currencySymbol = details.currency === "USD" ? "US$" : "Q";
