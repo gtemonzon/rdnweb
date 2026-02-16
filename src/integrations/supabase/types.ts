@@ -104,6 +104,36 @@ export type Database = {
         }
         Relationships: []
       }
+      donation_notification_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          notification_type: string
+          reference_number: string
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          reference_number: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          reference_number?: string
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       donation_receipts: {
         Row: {
           cancelled_at: string | null
@@ -173,6 +203,60 @@ export type Database = {
           updated_at?: string
           uuid_sat?: string | null
           xml_url?: string | null
+        }
+        Relationships: []
+      }
+      donation_settings: {
+        Row: {
+          accounting_email_body: string | null
+          accounting_email_subject: string
+          accounting_emails: string[]
+          created_at: string
+          donor_email_body: string | null
+          donor_email_enabled: boolean
+          donor_email_subject: string
+          environment: string
+          id: string
+          send_accounting_email: boolean
+          send_donor_email: boolean
+          sender_email_address: string | null
+          sender_email_name: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          accounting_email_body?: string | null
+          accounting_email_subject?: string
+          accounting_emails?: string[]
+          created_at?: string
+          donor_email_body?: string | null
+          donor_email_enabled?: boolean
+          donor_email_subject?: string
+          environment?: string
+          id?: string
+          send_accounting_email?: boolean
+          send_donor_email?: boolean
+          sender_email_address?: string | null
+          sender_email_name?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          accounting_email_body?: string | null
+          accounting_email_subject?: string
+          accounting_emails?: string[]
+          created_at?: string
+          donor_email_body?: string | null
+          donor_email_enabled?: boolean
+          donor_email_subject?: string
+          environment?: string
+          id?: string
+          send_accounting_email?: boolean
+          send_donor_email?: boolean
+          sender_email_address?: string | null
+          sender_email_name?: string
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
