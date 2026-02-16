@@ -47,6 +47,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings } from "lucide-react";
+import DonationSettingsPanel from "@/components/DonationSettingsPanel";
 
 interface Donation {
   id: string;
@@ -448,8 +451,23 @@ const AdminDonaciones = () => {
             </div>
           </div>
 
+          {/* Tabs */}
+          <Tabs defaultValue="donations" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="donations">
+                <Heart className="w-4 h-4 mr-2" />
+                Donaciones
+              </TabsTrigger>
+              <TabsTrigger value="settings">
+                <Settings className="w-4 h-4 mr-2" />
+                Configuración
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="donations" className="space-y-6">
+
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Total Donaciones</CardDescription>
@@ -828,6 +846,13 @@ const AdminDonaciones = () => {
               )}
             </DialogContent>
           </Dialog>
+
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <DonationSettingsPanel />
+            </TabsContent>
+          </Tabs>
         </div>
       </section>
     </Layout>
