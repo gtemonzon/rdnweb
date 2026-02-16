@@ -1,9 +1,10 @@
 import emailjs from "@emailjs/browser";
 import { supabase } from "@/integrations/supabase/client";
 
-const SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "";
-const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "";
-const DONOR_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_DONATION_TEMPLATE_ID || "";
+// DEV-ONLY: Publishable keys hardcoded (safe for browser, not secrets)
+const SERVICE_ID = "service_isfjifd";
+const PUBLIC_KEY = "JR928cGjuDVzHlPc3";
+const DONOR_TEMPLATE_ID = "template_jhy6jik";
 
 interface DonationEmailData {
   donor_name: string;
