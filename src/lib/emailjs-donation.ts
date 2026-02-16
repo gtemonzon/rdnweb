@@ -20,22 +20,22 @@ const isConfigured = () =>
 /**
  * DEV-ONLY: Send donation confirmation via EmailJS (browser SDK).
  * Checks donation_settings.environment — skips entirely if "production".
- * Uses sessionStorage for idempotency.
+ * Uses sessionStorage for idempotency (key: email_sent_<reference>).
  */
 export const sendDevDonationEmailJS = async (data: DonationEmailData) => {
   if (!isConfigured()) {
-    console.log("[EmailJS-Dev] Not configured, skipping");
+    console.log("[EmailJS] Not configured, skipping");
     return;
   }
 
-  // Idempotency
-  const key = `emailjs_sent_${data.reference_number}`;
+  // Idempotency — use email_sent_<reference_number> as key
+  const key = `email_sent_${data.reference_number}`;
   if (sessionStorage.getItem(key) === "true") {
-    console.log("[EmailJS-Dev] Already sent for", data.reference_number);
+    console.log("[EmailJS] Already sent for", data.reference_number);
     return;
   }
 
-  // Check environment from DB
+  // Environment guard: skip entirely in production
   try {
     const { data: settings } = await supabase
       .from("donation_settings")
@@ -44,7 +44,7 @@ export const sendDevDonationEmailJS = async (data: DonationEmailData) => {
       .maybeSingle();
 
     if (settings?.environment === "production") {
-      console.log("[EmailJS-Dev] Production environment — skipping EmailJS");
+      console.log("[EmailJS] Production environment — skipping");
       return;
     }
   } catch {
@@ -54,24 +54,23 @@ export const sendDevDonationEmailJS = async (data: DonationEmailData) => {
   const currencySymbol = data.currency === "USD" ? "US$" : "Q";
 
   const templateParams = {
+    to_email: data.donor_email,
     donor_name: data.donor_name || "Donante",
     donor_email: data.donor_email,
     amount: `${currencySymbol}${data.amount}`,
     currency: data.currency || "GTQ",
     reference_number: data.reference_number,
     transaction_id: data.transaction_id || "N/A",
-    site_base_url: window.location.origin,
-    thank_you_message:
-      "¡Gracias por tu generosa donación! Tu apoyo marca una diferencia real en la vida de los niños y niñas que atendemos.",
-    to_email: data.donor_email,
+    donation_date: new Date().toLocaleString("es-GT"),
+    site_url: window.location.origin,
   };
 
   try {
     const res = await emailjs.send(SERVICE_ID, DONOR_TEMPLATE_ID, templateParams, PUBLIC_KEY);
-    console.log("[EmailJS-Dev] Donor email sent", res.status, res.text);
+    console.log("[EmailJS] Donor confirmation email sent", res.status, res.text);
     sessionStorage.setItem(key, "true");
   } catch (err) {
-    console.error("[EmailJS-Dev] Failed to send donor email:", err);
+    console.error("[EmailJS Donation Error]", err);
     // Non-blocking — don't throw
   }
 };
