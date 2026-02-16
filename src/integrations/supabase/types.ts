@@ -286,6 +286,12 @@ export type Database = {
           donor_name: string
           donor_nit: string | null
           donor_phone: string | null
+          fel_date: string | null
+          fel_issued: boolean
+          fel_number: string | null
+          fel_recorded_at: string | null
+          fel_recorded_by: string | null
+          fel_series: string | null
           id: string
           notes: string | null
           payment_method: string
@@ -308,6 +314,12 @@ export type Database = {
           donor_name: string
           donor_nit?: string | null
           donor_phone?: string | null
+          fel_date?: string | null
+          fel_issued?: boolean
+          fel_number?: string | null
+          fel_recorded_at?: string | null
+          fel_recorded_by?: string | null
+          fel_series?: string | null
           id?: string
           notes?: string | null
           payment_method?: string
@@ -330,6 +342,12 @@ export type Database = {
           donor_name?: string
           donor_nit?: string | null
           donor_phone?: string | null
+          fel_date?: string | null
+          fel_issued?: boolean
+          fel_number?: string | null
+          fel_recorded_at?: string | null
+          fel_recorded_by?: string | null
+          fel_series?: string | null
           id?: string
           notes?: string | null
           payment_method?: string

@@ -95,6 +95,9 @@ const PaymentReturn = () => {
       })
     );
 
+    // Clear localStorage donor payload after successful payment
+    localStorage.removeItem("rdn_donation_donor_payload");
+
     const sendNotifications = async () => {
       if (!alreadyEmailed) {
         const payload = {
