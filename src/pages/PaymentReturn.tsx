@@ -59,9 +59,10 @@ const PaymentReturn = () => {
     }
   }, [searchParams]);
 
-  // Send notification email on success
+  // Send notification email on success — but only if backend didn't already do it
   useEffect(() => {
-    if (status !== "success" || notifiedRef.current) return;
+    const alreadyNotified = searchParams.get("notified") === "1";
+    if (status !== "success" || notifiedRef.current || alreadyNotified) return;
     if (!details.amount || !details.reference) return;
 
     notifiedRef.current = true;
@@ -86,7 +87,7 @@ const PaymentReturn = () => {
         else console.log("Donation notification sent");
       })
       .finally(() => setEmailSending(false));
-  }, [status, details]);
+  }, [status, details, searchParams]);
 
   const currencySymbol = details.currency === "USD" ? "US$" : "Q";
 

@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.cybersource-sign]
 verify_jwt = false
+
+[functions.cybersource-return]
+verify_jwt = false
+
+[functions.notify-donation]
+verify_jwt = false
