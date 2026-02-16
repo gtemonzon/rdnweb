@@ -63,7 +63,7 @@ export const sendDevDonationEmailJS = async (data: DonationEmailData) => {
     reference_number: data.reference_number,
     transaction_id: data.transaction_id || "N/A",
     donation_date: new Date().toLocaleString("es-GT"),
-    site_url: window.location.origin,
+    
   };
 
   try {
