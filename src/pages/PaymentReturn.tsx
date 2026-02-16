@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { CheckCircle, XCircle, AlertTriangle, Home, Heart, Loader2 } from "lucide-react";
+import { XCircle, AlertTriangle, Home, Heart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/layout/Layout";
@@ -14,13 +14,9 @@ const PaymentReturn = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<PaymentStatus>("loading");
   const [details, setDetails] = useState<Record<string, string>>({});
-  const [emailSending, setEmailSending] = useState(false);
   const notifiedRef = useRef(false);
 
-  console.log("[PaymentReturn] Component mounted, search:", window.location.search);
-
   useEffect(() => {
-    // Support both req_* and non-req params
     const get = (key: string) =>
       searchParams.get(key) || searchParams.get(`req_${key}`) || "";
 
@@ -56,21 +52,7 @@ const PaymentReturn = () => {
 
     setDetails(parsed);
 
-    // Save to sessionStorage for /gracias fallback
-    if (donorName || reqAmount) {
-      sessionStorage.setItem(
-        "lastDonation",
-        JSON.stringify({
-          name: donorName || "Donante",
-          amount: reqAmount,
-          currency: reqCurrency || "GTQ",
-          reference: reqRef,
-          date: new Date().toLocaleDateString("es-GT"),
-        })
-      );
-    }
-
-    // Determine status: ACCEPT or reason_code 100 = success
+    // Determine status
     const decisionUpper = decision.toUpperCase();
     const isSuccess =
       decisionUpper === "ACCEPT" ||
@@ -82,98 +64,114 @@ const PaymentReturn = () => {
       console.log("[PaymentReturn] Payment SUCCESS", parsed);
     } else if (decisionUpper === "CANCEL" || decisionUpper === "CANCELLED") {
       setStatus("cancelled");
-      console.log("[PaymentReturn] Payment CANCELLED");
     } else if (decisionUpper === "DECLINE" || decisionUpper === "REJECT") {
       setStatus("declined");
-      console.log("[PaymentReturn] Payment DECLINED");
     } else if (decision) {
       setStatus("error");
-      console.log("[PaymentReturn] Payment ERROR, decision:", decision);
     } else {
       const path = window.location.pathname;
-      const s = path.includes("cancel") ? "cancelled" : "error";
-      setStatus(s);
-      console.log("[PaymentReturn] No decision param, inferred:", s);
+      setStatus(path.includes("cancel") ? "cancelled" : "error");
     }
   }, [searchParams]);
 
-  // Send notification email on success — only once, with sessionStorage dedup
+  // On success: send notifications once, then redirect to /gracias
   useEffect(() => {
     if (status !== "success" || notifiedRef.current) return;
     if (!details.amount || !details.reference) return;
 
-    // SessionStorage dedup only — do NOT trust URL "notified" param
     const emailKey = `emailed_${details.reference}`;
     const alreadyEmailed = sessionStorage.getItem(emailKey) === "true";
-
-    if (alreadyEmailed) {
-      console.log("[PaymentReturn] Skipping notify-donation (already emailed via sessionStorage)", {
-        reference: details.reference,
-      });
-      notifiedRef.current = true;
-      return;
-    }
-
     notifiedRef.current = true;
-    setEmailSending(true);
 
-    const payload = {
-      donor_name: details.donorName || "Donante anónimo",
-      donor_email: details.donorEmail || "",
-      amount: details.amount,
-      currency: details.currency || "GTQ",
-      reference: details.reference,
-      transaction_id: details.transactionId || "",
-      card_type: details.cardType || "",
-      card_last4: details.cardLast4 || "",
-      date: new Date().toLocaleString("es-GT"),
+    // Save to sessionStorage for /gracias fallback
+    sessionStorage.setItem(
+      "lastDonation",
+      JSON.stringify({
+        name: details.donorName || "Donante",
+        amount: details.amount,
+        currency: details.currency || "GTQ",
+        reference: details.reference,
+        date: new Date().toLocaleDateString("es-GT"),
+      })
+    );
+
+    const sendNotifications = async () => {
+      if (!alreadyEmailed) {
+        const payload = {
+          donor_name: details.donorName || "Donante anónimo",
+          donor_email: details.donorEmail || "",
+          amount: details.amount,
+          currency: details.currency || "GTQ",
+          reference: details.reference,
+          transaction_id: details.transactionId || "",
+          card_type: details.cardType || "",
+          card_last4: details.cardLast4 || "",
+          date: new Date().toLocaleString("es-GT"),
+        };
+
+        // Backend notification
+        try {
+          const { error } = await supabase.functions.invoke("notify-donation", { body: payload });
+          if (error) console.error("[PaymentReturn] notify-donation FAILED:", error);
+          else sessionStorage.setItem(emailKey, "true");
+        } catch (e) {
+          console.error("[PaymentReturn] notify-donation error:", e);
+        }
+
+        // DEV-ONLY: EmailJS donor email
+        await sendDevDonationEmailJS({
+          donor_name: details.donorName || "Donante anónimo",
+          donor_email: details.donorEmail || "",
+          amount: details.amount,
+          currency: details.currency || "GTQ",
+          reference_number: details.reference,
+          transaction_id: details.transactionId || "",
+        });
+      }
+
+      // Redirect to /gracias
+      const params = new URLSearchParams({
+        name: details.donorName || "Donante",
+        amount: details.amount || "",
+        currency: details.currency || "GTQ",
+        reference: details.reference || "",
+        date: new Date().toLocaleDateString("es-GT"),
+      });
+      navigate(`/gracias?${params.toString()}`, { replace: true });
     };
 
-    console.log("[PaymentReturn] Calling notify-donation now...", payload);
+    sendNotifications();
+  }, [status, details, navigate]);
 
-    supabase.functions
-      .invoke("notify-donation", { body: payload })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("[PaymentReturn] notify-donation FAILED:", error);
-        } else {
-          console.log("[PaymentReturn] notify-donation response:", data);
-          sessionStorage.setItem(emailKey, "true");
-        }
-      })
-      .finally(() => setEmailSending(false));
+  // Only show UI for non-success statuses (success redirects to /gracias)
+  if (status === "loading") {
+    return (
+      <Layout>
+        <section className="py-20 bg-background">
+          <div className="container max-w-lg mx-auto text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Procesando tu pago...</p>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
 
-    // DEV-ONLY: Send donor email via EmailJS (skipped in production)
-    sendDevDonationEmailJS({
-      donor_name: details.donorName || "Donante anónimo",
-      donor_email: details.donorEmail || "",
-      amount: details.amount,
-      currency: details.currency || "GTQ",
-      reference_number: details.reference,
-      transaction_id: details.transactionId || "",
-    });
-  }, [status, details, searchParams]);
-
-  const currencySymbol = details.currency === "USD" ? "US$" : "Q";
-
-  const handleGoToThankYou = () => {
-    const params = new URLSearchParams({
-      name: details.donorName || "Donante",
-      amount: details.amount || "",
-      currency: details.currency || "GTQ",
-      reference: details.reference || "",
-      date: new Date().toLocaleDateString("es-GT"),
-    });
-    navigate(`/gracias?${params.toString()}`);
-  };
+  if (status === "success") {
+    // Brief transitional state before redirect
+    return (
+      <Layout>
+        <section className="py-20 bg-background">
+          <div className="container max-w-lg mx-auto text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">Redirigiendo...</p>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
 
   const statusConfig = {
-    success: {
-      icon: <CheckCircle className="w-16 h-16 text-green-500" />,
-      title: "¡Donación exitosa!",
-      description: "Tu pago ha sido procesado correctamente. Recibirás un correo de confirmación.",
-      bgClass: "bg-green-50 dark:bg-green-950 border-green-200",
-    },
     declined: {
       icon: <XCircle className="w-16 h-16 text-red-500" />,
       title: "Pago rechazado",
@@ -192,12 +190,6 @@ const PaymentReturn = () => {
       description: "Has cancelado el proceso de pago. Puedes intentar de nuevo cuando lo desees.",
       bgClass: "bg-muted border-border",
     },
-    loading: {
-      icon: <div className="w-16 h-16 rounded-full border-4 border-primary border-t-transparent animate-spin" />,
-      title: "Procesando...",
-      description: "Verificando el estado de tu pago.",
-      bgClass: "bg-muted border-border",
-    },
   };
 
   const config = statusConfig[status];
@@ -213,50 +205,19 @@ const PaymentReturn = () => {
             </CardHeader>
             <CardContent className="text-center space-y-4">
               <p className="text-muted-foreground">{config.description}</p>
-
-              {status === "success" && details.amount && (
-                <div className="p-4 rounded-lg bg-green-100 dark:bg-green-900">
-                  <p className="text-sm text-muted-foreground">Monto donado</p>
-                  <p className="text-3xl font-heading font-bold text-primary">
-                    {currencySymbol}{details.amount}
-                  </p>
-                  {details.reference && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Referencia: {details.reference}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {emailSending && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Enviando confirmación...
-                </div>
-              )}
-
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
-                {status === "success" ? (
-                  <Button onClick={handleGoToThankYou} size="lg">
+                <Button asChild variant="outline">
+                  <Link to="/">
+                    <Home className="w-4 h-4 mr-2" />
+                    Ir al inicio
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/donar">
                     <Heart className="w-4 h-4 mr-2" />
-                    Continuar
-                  </Button>
-                ) : (
-                  <>
-                    <Button asChild variant="outline">
-                      <Link to="/">
-                        <Home className="w-4 h-4 mr-2" />
-                        Ir al inicio
-                      </Link>
-                    </Button>
-                    <Button asChild>
-                      <Link to="/donar">
-                        <Heart className="w-4 h-4 mr-2" />
-                        Intentar de nuevo
-                      </Link>
-                    </Button>
-                  </>
-                )}
+                    Intentar de nuevo
+                  </Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
