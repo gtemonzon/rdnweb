@@ -16,75 +16,132 @@ const PaymentReturn = () => {
   const [emailSending, setEmailSending] = useState(false);
   const notifiedRef = useRef(false);
 
+  console.log("[PaymentReturn] Component mounted, search:", window.location.search);
+
   useEffect(() => {
+    // Support both req_* and non-req params
+    const get = (key: string) =>
+      searchParams.get(key) || searchParams.get(`req_${key}`) || "";
+
     const decision = searchParams.get("decision") || searchParams.get("reason_code") || "";
-    const reqRef = searchParams.get("req_reference_number") || "";
-    const reqAmount = searchParams.get("req_amount") || "";
-    const reqCurrency = searchParams.get("req_currency") || "";
+    const reqRef = get("reference_number");
+    const reqAmount = get("amount");
+    const reqCurrency = get("currency");
     const message = searchParams.get("message") || "";
     const transactionId = searchParams.get("transaction_id") || "";
-    const cardType = searchParams.get("req_card_type") || "";
-    const cardNumber = searchParams.get("req_card_number") || "";
-    const billEmail = searchParams.get("req_bill_to_email") || "";
-    const billForename = searchParams.get("req_bill_to_forename") || "";
-    const billSurname = searchParams.get("req_bill_to_surname") || "";
+    const cardType = get("card_type");
+    const cardNumber = get("card_number");
+    const billEmail = get("bill_to_email");
+    const billForename = get("bill_to_forename");
+    const billSurname = get("bill_to_surname");
+    const reasonCode = searchParams.get("reason_code") || "";
 
     const cardLast4 = cardNumber ? cardNumber.slice(-4) : "";
+    const donorName = `${billForename} ${billSurname}`.trim();
 
-    setDetails({
+    const parsed = {
       reference: reqRef,
       amount: reqAmount,
       currency: reqCurrency,
       message,
       transactionId,
       decision,
+      reasonCode,
       cardType,
       cardLast4,
-      donorName: `${billForename} ${billSurname}`.trim(),
+      donorName,
       donorEmail: billEmail,
-    });
+    };
 
+    setDetails(parsed);
+
+    // Save to sessionStorage for /gracias fallback
+    if (donorName || reqAmount) {
+      sessionStorage.setItem(
+        "lastDonation",
+        JSON.stringify({
+          name: donorName || "Donante",
+          amount: reqAmount,
+          currency: reqCurrency || "GTQ",
+          reference: reqRef,
+          date: new Date().toLocaleDateString("es-GT"),
+        })
+      );
+    }
+
+    // Determine status: ACCEPT or reason_code 100 = success
     const decisionUpper = decision.toUpperCase();
-    if (decisionUpper === "ACCEPT" || decisionUpper === "100") {
+    const isSuccess =
+      decisionUpper === "ACCEPT" ||
+      decisionUpper === "100" ||
+      reasonCode === "100";
+
+    if (isSuccess) {
       setStatus("success");
+      console.log("[PaymentReturn] Payment SUCCESS", parsed);
     } else if (decisionUpper === "CANCEL" || decisionUpper === "CANCELLED") {
       setStatus("cancelled");
+      console.log("[PaymentReturn] Payment CANCELLED");
     } else if (decisionUpper === "DECLINE" || decisionUpper === "REJECT") {
       setStatus("declined");
+      console.log("[PaymentReturn] Payment DECLINED");
     } else if (decision) {
       setStatus("error");
+      console.log("[PaymentReturn] Payment ERROR, decision:", decision);
     } else {
       const path = window.location.pathname;
-      setStatus(path.includes("cancel") ? "cancelled" : "error");
+      const s = path.includes("cancel") ? "cancelled" : "error";
+      setStatus(s);
+      console.log("[PaymentReturn] No decision param, inferred:", s);
     }
   }, [searchParams]);
 
-  // Send notification email on success — but only if backend didn't already do it
+  // Send notification email on success — only once, with sessionStorage dedup
   useEffect(() => {
-    const alreadyNotified = searchParams.get("notified") === "1";
-    if (status !== "success" || notifiedRef.current || alreadyNotified) return;
+    if (status !== "success" || notifiedRef.current) return;
     if (!details.amount || !details.reference) return;
+
+    // Backend already sent it?
+    const alreadyNotified = searchParams.get("notified") === "1";
+    // SessionStorage dedup
+    const emailKey = `emailed_${details.reference}`;
+    const alreadyEmailed = sessionStorage.getItem(emailKey) === "true";
+
+    if (alreadyNotified || alreadyEmailed) {
+      console.log("[PaymentReturn] Skipping notify-donation (already sent)", {
+        alreadyNotified,
+        alreadyEmailed,
+      });
+      notifiedRef.current = true;
+      return;
+    }
 
     notifiedRef.current = true;
     setEmailSending(true);
 
+    const payload = {
+      donor_name: details.donorName || "Donante anónimo",
+      donor_email: details.donorEmail || "",
+      amount: details.amount,
+      currency: details.currency || "GTQ",
+      reference: details.reference,
+      transaction_id: details.transactionId || "",
+      card_type: details.cardType || "",
+      card_last4: details.cardLast4 || "",
+      date: new Date().toLocaleString("es-GT"),
+    };
+
+    console.log("[PaymentReturn] Invoking notify-donation with payload:", payload);
+
     supabase.functions
-      .invoke("notify-donation", {
-        body: {
-          donor_name: details.donorName || "Donante anónimo",
-          donor_email: details.donorEmail || "",
-          amount: details.amount,
-          currency: details.currency || "GTQ",
-          reference: details.reference,
-          transaction_id: details.transactionId || "",
-          card_type: details.cardType || "",
-          card_last4: details.cardLast4 || "",
-          date: new Date().toLocaleString("es-GT"),
-        },
-      })
-      .then(({ error }) => {
-        if (error) console.error("Failed to send donation notification:", error);
-        else console.log("Donation notification sent");
+      .invoke("notify-donation", { body: payload })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("[PaymentReturn] notify-donation FAILED:", error);
+        } else {
+          console.log("[PaymentReturn] notify-donation SUCCESS:", data);
+          sessionStorage.setItem(emailKey, "true");
+        }
       })
       .finally(() => setEmailSending(false));
   }, [status, details, searchParams]);
