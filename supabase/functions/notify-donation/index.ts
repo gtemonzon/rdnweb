@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const ALLOWED_ORIGINS = [
   "https://rdnweb.lovable.app",
@@ -47,91 +46,33 @@ interface DonationSettings {
   send_accounting_email: boolean;
 }
 
-/* ── Minimal SMTP-over-TLS client (no STARTTLS needed) ── */
+/* ── Resend email sender ── */
 
-async function smtpSendEmail(
-  host: string, port: number, user: string, pass: string,
-  from: string, to: string, subject: string, html: string,
-) {
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
+async function sendEmailViaResend(
+  apiKey: string,
+  from: string,
+  to: string,
+  subject: string,
+  html: string,
+): Promise<{ success: boolean; error?: string }> {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to: [to], subject, html }),
+  });
 
-  // Connect with TLS directly (port 465) or plain (port 25/587)
-  let conn: Deno.Conn;
-  if (port === 465) {
-    conn = await Deno.connectTls({ hostname: host, port });
-  } else {
-    conn = await Deno.connect({ hostname: host, port });
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error("Resend API error:", res.status, errBody);
+    return { success: false, error: `Resend ${res.status}: ${errBody}` };
   }
 
-  async function read(): Promise<string> {
-    const buf = new Uint8Array(4096);
-    const n = await conn.read(buf);
-    if (n === null) return "";
-    return decoder.decode(buf.subarray(0, n));
-  }
-
-  async function send(cmd: string): Promise<string> {
-    await conn.write(encoder.encode(cmd + "\r\n"));
-    // small delay to let server respond
-    await new Promise(r => setTimeout(r, 150));
-    return await read();
-  }
-
-  try {
-    // Read greeting
-    const greeting = await read();
-    console.log("SMTP greeting:", greeting.trim());
-
-    // EHLO
-    const ehlo = await send(`EHLO lovable.app`);
-    console.log("EHLO:", ehlo.trim().split("\n")[0]);
-
-    // AUTH LOGIN
-    const authResp = await send(`AUTH LOGIN`);
-    console.log("AUTH:", authResp.trim());
-    await send(base64Encode(encoder.encode(user)));
-    const passResp = await send(base64Encode(encoder.encode(pass)));
-    console.log("AUTH result:", passResp.trim());
-
-    if (!passResp.includes("235")) {
-      throw new Error(`SMTP AUTH failed: ${passResp.trim()}`);
-    }
-
-    // MAIL FROM
-    await send(`MAIL FROM:<${from}>`);
-
-    // RCPT TO
-    const rcptResp = await send(`RCPT TO:<${to}>`);
-    if (!rcptResp.includes("250")) {
-      throw new Error(`RCPT TO rejected: ${rcptResp.trim()}`);
-    }
-
-    // DATA
-    await send(`DATA`);
-
-    // Compose message
-    const boundary = `boundary_${Date.now()}`;
-    const message = [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: =?UTF-8?B?${base64Encode(encoder.encode(subject))}?=`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/html; charset=UTF-8`,
-      `Content-Transfer-Encoding: base64`,
-      ``,
-      base64Encode(encoder.encode(html)),
-      `.`,
-    ].join("\r\n");
-
-    const dataResp = await send(message);
-    console.log("DATA result:", dataResp.trim());
-
-    // QUIT
-    await send(`QUIT`);
-  } finally {
-    try { conn.close(); } catch (_) { /* ignore */ }
-  }
+  const data = await res.json();
+  console.log("Resend email sent, id:", data.id);
+  return { success: true };
 }
 
 /* ── Template helpers ── */
@@ -195,6 +136,16 @@ serve(async (req) => {
     const data: DonationNotification = await req.json();
     console.log("notify-donation invoked, reference:", data.reference);
 
+    // --- Validate Resend API key ---
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ success: false, error: "Email service not configured (missing RESEND_API_KEY)" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // --- Load settings from database ---
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -249,21 +200,6 @@ serve(async (req) => {
       };
     }
 
-    // --- SMTP config validation ---
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpPort = Deno.env.get("SMTP_PORT");
-    const smtpUsername = Deno.env.get("SMTP_USERNAME");
-    const smtpPassword = Deno.env.get("SMTP_PASSWORD");
-
-    if (!smtpHost || !smtpPort || !smtpUsername || !smtpPassword) {
-      const missing = { SMTP_HOST: !smtpHost, SMTP_PORT: !smtpPort, SMTP_USERNAME: !smtpUsername, SMTP_PASSWORD: !smtpPassword };
-      console.error("SMTP configuration missing:", missing);
-      return new Response(
-        JSON.stringify({ success: false, error: "SMTP not configured", missing }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Template variables
     const currencySymbol = data.currency === "USD" ? "US$" : "Q";
     const cardInfo = data.card_type && data.card_last4
@@ -284,8 +220,12 @@ serve(async (req) => {
       date: data.date,
     };
 
-    const senderAddress = settings.sender_email_address || smtpUsername;
-    const portNum = parseInt(smtpPort);
+    // Sender: use settings or fallback to Resend's default
+    const senderName = settings.sender_email_name || "El Refugio de la Niñez";
+    const senderEmail = settings.sender_email_address || "onboarding@resend.dev";
+    const fromAddress = `${senderName} <${senderEmail}>`;
+
+    const errors: string[] = [];
 
     // --- Send accounting notification ---
     if (settings.send_accounting_email && settings.accounting_emails.length > 0) {
@@ -296,9 +236,9 @@ serve(async (req) => {
 
       for (const email of settings.accounting_emails) {
         console.log("Sending accounting email to:", email.trim());
-        await smtpSendEmail(smtpHost, portNum, smtpUsername, smtpPassword, senderAddress, email.trim(), acctSubject, acctHtml);
+        const result = await sendEmailViaResend(resendApiKey, fromAddress, email.trim(), acctSubject, acctHtml);
+        if (!result.success) errors.push(`accounting(${email}): ${result.error}`);
       }
-      console.log("Accounting notification sent");
     }
 
     // --- Send donor thank-you ---
@@ -309,8 +249,8 @@ serve(async (req) => {
         : defaultDonorHtml(templateVars);
 
       console.log("Sending donor email to:", data.donor_email);
-      await smtpSendEmail(smtpHost, portNum, smtpUsername, smtpPassword, senderAddress, data.donor_email, donorSubject, donorHtml);
-      console.log("Donor thank-you email sent");
+      const result = await sendEmailViaResend(resendApiKey, fromAddress, data.donor_email, donorSubject, donorHtml);
+      if (!result.success) errors.push(`donor: ${result.error}`);
     }
 
     // --- Record in notification log ---
@@ -321,11 +261,20 @@ serve(async (req) => {
           reference_number: data.reference,
           transaction_id: data.transaction_id || null,
           notification_type: "payment",
-          status: "sent",
+          status: errors.length > 0 ? "partial" : "sent",
+          error_message: errors.length > 0 ? errors.join("; ") : null,
         });
       } catch (logErr) {
         console.error("Failed to log notification (non-critical):", logErr);
       }
+    }
+
+    if (errors.length > 0) {
+      console.error("Some emails failed:", errors);
+      return new Response(
+        JSON.stringify({ success: false, error: "Some emails failed", details: errors }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log("notify-donation completed successfully for ref:", data.reference);
