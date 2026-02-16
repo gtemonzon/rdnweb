@@ -76,7 +76,11 @@ serve(async (req) => {
     const refNumber = reference_number || `DON-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const formattedAmount = parseFloat(amount).toFixed(2);
 
-    const signedFieldNames = [
+    // Build the Cybersource return URL pointing to our edge function
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const returnUrl = `${supabaseUrl}/functions/v1/cybersource-return`;
+
+    const signedFieldsList = [
       "access_key",
       "profile_id",
       "transaction_uuid",
@@ -94,7 +98,11 @@ serve(async (req) => {
       "bill_to_address_line1",
       "bill_to_address_city",
       "bill_to_address_country",
-    ].join(",");
+      "override_custom_receipt_page",
+      "override_custom_cancel_page",
+    ];
+
+    const signedFieldNames = signedFieldsList.join(",");
 
     const params: Record<string, string> = {
       access_key: accessKey,
@@ -114,6 +122,8 @@ serve(async (req) => {
       bill_to_address_line1: bill_address1 || "",
       bill_to_address_city: bill_city || "",
       bill_to_address_country: bill_country || "GT",
+      override_custom_receipt_page: returnUrl,
+      override_custom_cancel_page: returnUrl,
     };
 
     const signature = await signFields(secretKey, signedFieldNames, params);
