@@ -11,8 +11,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
  * this backend endpoint to:
  * 1. Parse the form-encoded body
  * 2. Verify the HMAC-SHA256 signature (mandatory to prevent tampering)
- * 3. Trigger email notifications on success
- * 4. Redirect the browser to the SPA with query params
+ * 3. Persist donation + donor to database
+ * 4. Trigger email notifications on success
+ * 5. Redirect the browser to the SPA with query params
  */
 
 const FRONTEND_BASE = "https://rdnweb.lovable.app";
@@ -51,13 +52,11 @@ async function verifySignature(
 }
 
 serve(async (req) => {
-  // Only POST is expected from Cybersource
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
 
   try {
-    // Parse form-urlencoded body
     const body = await req.text();
     const formData = new URLSearchParams(body);
     const params: Record<string, string> = {};
@@ -68,7 +67,6 @@ serve(async (req) => {
     const signedFieldNames = params["signed_field_names"] || "";
     const receivedSignature = params["signature"] || "";
 
-    // --- Signature verification (mandatory) ---
     const secretKey = Deno.env.get("CYBERSOURCE_SA_SECRET_KEY");
     if (!secretKey) {
       console.error("CYBERSOURCE_SA_SECRET_KEY not configured");
@@ -76,24 +74,22 @@ serve(async (req) => {
     }
 
     if (!signedFieldNames || !receivedSignature) {
-      console.error("Missing signed_field_names or signature in Cybersource response");
+      console.error("Missing signed_field_names or signature");
       return redirectToFrontend("error", params, "Firma faltante");
     }
 
     const valid = await verifySignature(secretKey, signedFieldNames, params, receivedSignature);
     if (!valid) {
-      console.error("Signature verification FAILED – possible tampering");
+      console.error("Signature verification FAILED");
       return new Response("Invalid signature", { status: 400 });
     }
 
     console.log("Signature verified OK for ref:", params["req_reference_number"] || params["reference_number"]);
 
-    // --- Determine payment status ---
     const decision = (params["decision"] || "").toUpperCase();
     const reasonCode = params["reason_code"] || "";
     const isSuccess = decision === "ACCEPT" || reasonCode === "100";
 
-    // Extract donor/transaction details
     const refNumber = params["req_reference_number"] || params["reference_number"] || "";
     const amount = params["req_amount"] || params["auth_amount"] || "";
     const currency = params["req_currency"] || params["auth_currency"] || "";
@@ -104,8 +100,12 @@ serve(async (req) => {
     const cardType = params["req_card_type"] || "";
     const rawCardNumber = params["req_card_number"] || "";
     const cardLast4 = rawCardNumber.length >= 4 ? rawCardNumber.slice(-4) : rawCardNumber;
+    const billPhone = params["req_bill_to_phone"] || "";
+    const billAddress = params["req_bill_to_address_line1"] || "";
+    const billCity = params["req_bill_to_address_city"] || "";
+    const billState = params["req_bill_to_address_state"] || "";
+    const billCountry = params["req_bill_to_address_country"] || "";
 
-    // --- On success: send notification emails ---
     if (isSuccess) {
       // --- Persist donation to database ---
       try {
@@ -122,7 +122,7 @@ serve(async (req) => {
           if (billEmail) {
             const { data: existingDonor } = await sb
               .from("donors")
-              .select("id")
+              .select("id, donation_count")
               .eq("email", billEmail)
               .maybeSingle();
 
@@ -130,13 +130,17 @@ serve(async (req) => {
               donorId = existingDonor.id;
               await sb.from("donors").update({
                 name: donorName,
+                phone: billPhone || undefined,
+                address: billAddress || undefined,
                 last_donation_at: new Date().toISOString(),
-                donation_count: (existingDonor as any).donation_count ? (existingDonor as any).donation_count + 1 : 1,
+                donation_count: (existingDonor.donation_count || 0) + 1,
               }).eq("id", donorId);
             } else {
               const { data: newDonor } = await sb.from("donors").insert({
                 email: billEmail,
                 name: donorName,
+                phone: billPhone || null,
+                address: billAddress || null,
                 first_donation_at: new Date().toISOString(),
                 last_donation_at: new Date().toISOString(),
                 donation_count: 1,
@@ -157,7 +161,9 @@ serve(async (req) => {
             await sb.from("donations").insert({
               donor_id: donorId,
               donor_email: billEmail || "unknown@donation.web",
-              donor_name: donorName,
+              donor_name: `${billForename} ${billSurname}`.trim() || "Donante anónimo",
+              donor_phone: billPhone || null,
+              donor_address: billAddress || null,
               amount: parsedAmount,
               status: "confirmed",
               source: "web",
@@ -185,7 +191,6 @@ serve(async (req) => {
         }
       } catch (dbErr) {
         console.error("Error persisting donation:", dbErr);
-        // Never block user flow for DB errors
       }
 
       // --- Send notification emails ---
@@ -223,8 +228,6 @@ serve(async (req) => {
             await resp.text();
             console.log("notify-donation sent successfully");
           }
-        } else {
-          console.error("SUPABASE_URL or SUPABASE_ANON_KEY not set, skipping notification");
         }
       } catch (emailErr) {
         console.error("Error calling notify-donation:", emailErr);
