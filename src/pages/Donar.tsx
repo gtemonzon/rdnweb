@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info,
   Lock, DollarSign, Upload, ExternalLink, ChevronRight, ChevronLeft, Shield,
@@ -30,8 +30,8 @@ import {
 
 type Currency = "GTQ" | "USD";
 
-const donationAmountsGTQ = [50, 100, 250, 500, 1000];
-const donationAmountsUSD = [10, 25, 50, 100, 200];
+const defaultAmountsGTQ = [50, 100, 250, 500, 1000];
+const defaultAmountsUSD = [10, 25, 50, 100, 200];
 
 const impactItemsGTQ = [
   { amount: "Q50", description: "Material educativo para un niño por un mes" },
@@ -98,23 +98,49 @@ const Donar = () => {
   const [transferReceipt, setTransferReceipt] = useState<File | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
+  // Dynamic donation settings from DB
+  const [donationAmountsGTQ, setDonationAmountsGTQ] = useState(defaultAmountsGTQ);
+  const [donationAmountsUSD, setDonationAmountsUSD] = useState(defaultAmountsUSD);
+  const [minAmountGTQ, setMinAmountGTQ] = useState(50);
+  const [minAmountUSD, setMinAmountUSD] = useState(10);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from("donation_settings")
+        .select("min_amount, suggested_amounts, min_amount_usd, suggested_amounts_usd")
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        const d = data as any;
+        if (d.min_amount > 0) setMinAmountGTQ(d.min_amount);
+        if (d.min_amount_usd > 0) setMinAmountUSD(d.min_amount_usd);
+        if (Array.isArray(d.suggested_amounts) && d.suggested_amounts.length > 0) {
+          setDonationAmountsGTQ(d.suggested_amounts.map(Number).filter((n: number) => n > 0));
+        }
+        if (Array.isArray(d.suggested_amounts_usd) && d.suggested_amounts_usd.length > 0) {
+          setDonationAmountsUSD(d.suggested_amounts_usd.map(Number).filter((n: number) => n > 0));
+        }
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const selectedCountry = getCountryByCode(formData.country) || countries[0];
   const availableDepartments = departmentsByCountry[formData.country] || [];
 
   const donationAmounts = currency === "GTQ" ? donationAmountsGTQ : donationAmountsUSD;
   const impactItems = currency === "GTQ" ? impactItemsGTQ : impactItemsUSD;
   const currencySymbol = currency === "GTQ" ? "Q" : "US$";
-  const currencyMultiple = currency === "GTQ" ? 50 : 10;
-  const minAmount = currencyMultiple;
-  const finalAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
+  const minAmount = currency === "GTQ" ? minAmountGTQ : minAmountUSD;
+  const finalAmount = selectedAmount || (customAmount ? parseFloat(customAmount) : 0);
 
   const phoneE164 = toE164(formData.phone, selectedCountry.dialCode);
 
   const validateCustomAmount = (value: string): string | null => {
     if (!value) return null;
-    const amount = parseInt(value);
+    const amount = parseFloat(value);
     if (isNaN(amount) || amount < minAmount) return `El monto mínimo es ${currencySymbol}${minAmount}`;
-    if (amount % currencyMultiple !== 0) return `El monto debe ser múltiplo de ${currencySymbol}${currencyMultiple}`;
     return null;
   };
 
@@ -456,20 +482,20 @@ const Donar = () => {
                         </span>
                         <Input
                           type="number"
-                          placeholder={`Otro monto (múltiplos de ${currencyMultiple})`}
+                          placeholder={`Otro monto (mínimo ${currencySymbol}${minAmount})`}
                           className={`pl-10 text-sm ${customAmountError ? "border-destructive" : ""}`}
                           value={customAmount}
                           onChange={(e) => handleCustomAmountChange(e.target.value)}
                           disabled={isSubmitting}
                           min={minAmount}
-                          step={currencyMultiple}
+                          step="0.01"
                         />
                       </div>
                       {customAmountError && (
                         <p className="text-xs text-destructive mt-1">{customAmountError}</p>
                       )}
                       <p className="text-xs text-muted-foreground mt-1">
-                        Mínimo: {currencySymbol}{minAmount} • Múltiplos de {currencySymbol}{currencyMultiple}
+                        Monto mínimo: {currencySymbol}{minAmount}
                       </p>
                     </div>
 
