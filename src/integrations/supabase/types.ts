@@ -217,10 +217,14 @@ export type Database = {
           donor_email_subject: string
           environment: string
           id: string
+          min_amount: number
+          min_amount_usd: number
           send_accounting_email: boolean
           send_donor_email: boolean
           sender_email_address: string | null
           sender_email_name: string
+          suggested_amounts: Json
+          suggested_amounts_usd: Json
           updated_at: string
           updated_by: string | null
         }
@@ -234,10 +238,14 @@ export type Database = {
           donor_email_subject?: string
           environment?: string
           id?: string
+          min_amount?: number
+          min_amount_usd?: number
           send_accounting_email?: boolean
           send_donor_email?: boolean
           sender_email_address?: string | null
           sender_email_name?: string
+          suggested_amounts?: Json
+          suggested_amounts_usd?: Json
           updated_at?: string
           updated_by?: string | null
         }
@@ -251,10 +259,14 @@ export type Database = {
           donor_email_subject?: string
           environment?: string
           id?: string
+          min_amount?: number
+          min_amount_usd?: number
           send_accounting_email?: boolean
           send_donor_email?: boolean
           sender_email_address?: string | null
           sender_email_name?: string
+          suggested_amounts?: Json
+          suggested_amounts_usd?: Json
           updated_at?: string
           updated_by?: string | null
         }

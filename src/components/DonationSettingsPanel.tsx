@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Loader2, Mail, Building2, TestTube } from "lucide-react";
+import { Save, Loader2, Mail, Building2, TestTube, DollarSign } from "lucide-react";
 
 interface DonationSettingsData {
   id: string;
@@ -30,6 +30,10 @@ interface DonationSettingsData {
   donor_email_body: string | null;
   send_donor_email: boolean;
   send_accounting_email: boolean;
+  min_amount: number;
+  suggested_amounts: number[];
+  min_amount_usd: number;
+  suggested_amounts_usd: number[];
 }
 
 const DonationSettingsPanel = () => {
@@ -38,6 +42,8 @@ const DonationSettingsPanel = () => {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<DonationSettingsData | null>(null);
   const [accountingEmailsText, setAccountingEmailsText] = useState("");
+  const [suggestedAmountsText, setSuggestedAmountsText] = useState("");
+  const [suggestedAmountsUsdText, setSuggestedAmountsUsdText] = useState("");
 
   useEffect(() => {
     fetchSettings();
@@ -57,6 +63,8 @@ const DonationSettingsPanel = () => {
       const s = data as unknown as DonationSettingsData;
       setSettings(s);
       setAccountingEmailsText((s.accounting_emails || []).join(", "));
+      setSuggestedAmountsText((s.suggested_amounts || []).join(", "));
+      setSuggestedAmountsUsdText((s.suggested_amounts_usd || []).join(", "));
     }
     setLoading(false);
   };
@@ -69,6 +77,35 @@ const DonationSettingsPanel = () => {
       .split(",")
       .map((e) => e.trim())
       .filter((e) => e.length > 0);
+
+    const parsedSuggested = suggestedAmountsText
+      .split(",")
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+
+    const parsedSuggestedUsd = suggestedAmountsUsdText
+      .split(",")
+      .map((s) => parseFloat(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+
+    if (settings.min_amount <= 0) {
+      toast({ title: "Error", description: "El monto mínimo GTQ debe ser mayor a 0", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+    if (settings.min_amount_usd <= 0) {
+      toast({ title: "Error", description: "El monto mínimo USD debe ser mayor a 0", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+
+    // Auto-include min_amount in suggested if missing
+    const finalSuggested = parsedSuggested.includes(settings.min_amount)
+      ? parsedSuggested
+      : [settings.min_amount, ...parsedSuggested];
+    const finalSuggestedUsd = parsedSuggestedUsd.includes(settings.min_amount_usd)
+      ? parsedSuggestedUsd
+      : [settings.min_amount_usd, ...parsedSuggestedUsd];
 
     const { error } = await supabase
       .from("donation_settings")
@@ -84,6 +121,10 @@ const DonationSettingsPanel = () => {
         donor_email_body: settings.donor_email_body || null,
         send_donor_email: settings.send_donor_email,
         send_accounting_email: settings.send_accounting_email,
+        min_amount: settings.min_amount,
+        suggested_amounts: finalSuggested,
+        min_amount_usd: settings.min_amount_usd,
+        suggested_amounts_usd: finalSuggestedUsd,
       } as any)
       .eq("id", settings.id);
 
@@ -113,6 +154,75 @@ const DonationSettingsPanel = () => {
 
   return (
     <div className="space-y-6">
+      {/* Donation Amounts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5" />
+            Monto de Donación
+          </CardTitle>
+          <CardDescription>
+            Configura montos mínimos y sugeridos para cada moneda
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* GTQ */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-foreground">Quetzales (GTQ)</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Monto mínimo (Q)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step="0.01"
+                  value={settings.min_amount}
+                  onChange={(e) => updateField("min_amount", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Montos sugeridos (separados por coma)</Label>
+                <Input
+                  value={suggestedAmountsText}
+                  onChange={(e) => setSuggestedAmountsText(e.target.value)}
+                  placeholder="50, 100, 200, 500"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Si el mínimo no está incluido, se agregará automáticamente.
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* USD */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-foreground">Dólares (USD)</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Monto mínimo (US$)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step="0.01"
+                  value={settings.min_amount_usd}
+                  onChange={(e) => updateField("min_amount_usd", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Montos sugeridos (separados por coma)</Label>
+                <Input
+                  value={suggestedAmountsUsdText}
+                  onChange={(e) => setSuggestedAmountsUsdText(e.target.value)}
+                  placeholder="10, 25, 50, 100, 200"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Si el mínimo no está incluido, se agregará automáticamente.
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Environment */}
       <Card>
         <CardHeader>
