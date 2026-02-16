@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info,
   Lock, DollarSign, Upload, ExternalLink, ChevronRight, ChevronLeft, Shield,
+  Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,19 +23,15 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import TransferReceiptUpload from "@/components/TransferReceiptUpload";
+import {
+  countries, getCountryByCode, departmentsByCountry,
+  toE164, isPlausiblePhone,
+} from "@/lib/countries";
 
 type Currency = "GTQ" | "USD";
 
 const donationAmountsGTQ = [50, 100, 250, 500, 1000];
 const donationAmountsUSD = [10, 25, 50, 100, 200];
-
-const guatemalaDepartments = [
-  "Alta Verapaz", "Baja Verapaz", "Chimaltenango", "Chiquimula",
-  "El Progreso", "Escuintla", "Guatemala", "Huehuetenango",
-  "Izabal", "Jalapa", "Jutiapa", "Petén", "Quetzaltenango",
-  "Quiché", "Retalhuleu", "Sacatepéquez", "San Marcos",
-  "Santa Rosa", "Sololá", "Suchitepéquez", "Totonicapán", "Zacapa",
-];
 
 const impactItemsGTQ = [
   { amount: "Q50", description: "Material educativo para un niño por un mes" },
@@ -63,11 +60,16 @@ const donationSchema = z.object({
   firstName: z.string().trim().min(1, "Los nombres son requeridos").max(50),
   lastName: z.string().trim().min(1, "Los apellidos son requeridos").max(50),
   email: z.string().trim().email("Correo inválido").max(255),
+  confirmEmail: z.string().trim().email("Correo inválido").max(255),
   phone: z.string().trim().max(20).optional(),
   nit: z.string().trim().max(15).optional(),
+  country: z.string().trim().min(1, "El país es requerido"),
   city: z.string().trim().max(100).optional(),
   department: z.string().trim().max(50).optional(),
   amount: z.number().min(1, "El monto debe ser mayor a 0"),
+}).refine((data) => data.email.toLowerCase() === data.confirmEmail.toLowerCase(), {
+  message: "El correo no coincide.",
+  path: ["confirmEmail"],
 });
 
 const steps = [
@@ -88,11 +90,16 @@ const Donar = () => {
   const [customAmountError, setCustomAmountError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"tarjeta" | "transferencia">("tarjeta");
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", email: "", phone: "",
-    nit: "", address: "", city: "", department: "",
+    firstName: "", lastName: "", email: "", confirmEmail: "",
+    phone: "", nit: "", address: "", city: "", department: "",
+    country: "GT",
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [transferReceipt, setTransferReceipt] = useState<File | null>(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
+
+  const selectedCountry = getCountryByCode(formData.country) || countries[0];
+  const availableDepartments = departmentsByCountry[formData.country] || [];
 
   const donationAmounts = currency === "GTQ" ? donationAmountsGTQ : donationAmountsUSD;
   const impactItems = currency === "GTQ" ? impactItemsGTQ : impactItemsUSD;
@@ -100,6 +107,8 @@ const Donar = () => {
   const currencyMultiple = currency === "GTQ" ? 50 : 10;
   const minAmount = currencyMultiple;
   const finalAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
+
+  const phoneE164 = toE164(formData.phone, selectedCountry.dialCode);
 
   const validateCustomAmount = (value: string): string | null => {
     if (!value) return null;
@@ -122,12 +131,58 @@ const Donar = () => {
     setCustomAmountError(null);
   };
 
+  const handleCountryChange = (countryCode: string) => {
+    setFormData((p) => ({
+      ...p,
+      country: countryCode,
+      department: "", // reset department when country changes
+    }));
+    // Revalidate phone if present
+    if (formData.phone) {
+      const country = getCountryByCode(countryCode);
+      if (country && !isPlausiblePhone(formData.phone, country)) {
+        setFieldErrors((prev) => ({ ...prev, phone: "Ingresa un número de teléfono válido." }));
+      } else {
+        setFieldErrors((prev) => { const { phone, ...rest } = prev; return rest; });
+      }
+    }
+  };
+
+  const handlePhoneChange = (value: string) => {
+    // Only allow digits, spaces, hyphens
+    const cleaned = value.replace(/[^\d\s\-]/g, "");
+    setFormData((p) => ({ ...p, phone: cleaned }));
+    if (cleaned && !isPlausiblePhone(cleaned, selectedCountry)) {
+      setFieldErrors((prev) => ({ ...prev, phone: "Ingresa un número de teléfono válido." }));
+    } else {
+      setFieldErrors((prev) => { const { phone, ...rest } = prev; return rest; });
+    }
+  };
+
+  const handleEmailChange = (field: "email" | "confirmEmail", value: string) => {
+    setFormData((p) => ({ ...p, [field]: value }));
+    // Live validation for confirmEmail match
+    const otherField = field === "email" ? "confirmEmail" : "email";
+    const otherValue = formData[otherField];
+    if (otherValue && value) {
+      if (value.toLowerCase() !== otherValue.toLowerCase()) {
+        setFieldErrors((prev) => ({ ...prev, confirmEmail: "El correo no coincide." }));
+      } else {
+        setFieldErrors((prev) => { const { confirmEmail, ...rest } = prev; return rest; });
+      }
+    } else {
+      setFieldErrors((prev) => { const { confirmEmail, ...rest } = prev; return rest; });
+    }
+  };
+
   const canAdvanceStep = (step: number): boolean => {
     if (step === 0) return finalAmount > 0 && !customAmountError;
     if (step === 1) {
-      const basic = !!formData.firstName && !!formData.lastName && !!formData.email;
-      if (paymentMethod === "tarjeta") return basic && !!formData.address && !!formData.city && !!formData.department;
-      return basic;
+      const basic = !!formData.firstName && !!formData.lastName && !!formData.email && !!formData.confirmEmail;
+      const emailsMatch = formData.email.toLowerCase() === formData.confirmEmail.toLowerCase();
+      const phoneValid = !formData.phone || isPlausiblePhone(formData.phone, selectedCountry);
+      if (paymentMethod === "tarjeta") return basic && emailsMatch && phoneValid && !!formData.address && !!formData.city && !!formData.department;
+      return basic && emailsMatch && phoneValid;
     }
     return true;
   };
@@ -181,9 +236,11 @@ const Donar = () => {
             donor_email: formData.email,
             donor_first_name: formData.firstName,
             donor_last_name: formData.lastName,
+            donor_phone: phoneE164 || undefined,
             bill_address1: formData.address,
             bill_city: formData.city,
-            bill_country: "GT",
+            bill_country: formData.country,
+            bill_state: formData.department,
             test_mode: true,
           },
         });
@@ -223,9 +280,10 @@ const Donar = () => {
             type: "transfer-donation",
             firstName: formData.firstName, lastName: formData.lastName,
             name: `${formData.firstName} ${formData.lastName}`,
-            email: formData.email, phone: formData.phone || undefined,
+            email: formData.email, phone: phoneE164 || undefined,
             nit: formData.nit || undefined, city: formData.city || undefined,
             department: formData.department || undefined,
+            country: formData.country,
             amount: finalAmount, currency, donationType, paymentMethod,
             receiptFileName: fileName, receiptUrl,
           },
@@ -234,7 +292,8 @@ const Donar = () => {
         toast({ title: "¡Gracias por tu donación!", description: "Hemos recibido tu boleta. Contabilidad verificará tu transferencia." });
       }
 
-      setFormData({ firstName: "", lastName: "", email: "", phone: "", nit: "", address: "", city: "", department: "" });
+      setFormData({ firstName: "", lastName: "", email: "", confirmEmail: "", phone: "", nit: "", address: "", city: "", department: "", country: "GT" });
+      setFieldErrors({});
       setTransferReceipt(null);
       setSelectedAmount(null);
       setCustomAmount("");
@@ -438,6 +497,7 @@ const Donar = () => {
                       <p className="text-sm text-muted-foreground">Información para tu recibo de donación.</p>
                     </div>
 
+                    {/* Name fields */}
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label htmlFor="donor-firstName" className="text-xs font-semibold">Nombres *</Label>
@@ -451,19 +511,37 @@ const Donar = () => {
                       </div>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="donor-email" className="text-xs font-semibold">Correo electrónico *</Label>
-                        <Input id="donor-email" type="email" placeholder="tu@email.com" value={formData.email}
-                          onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} disabled={isSubmitting} required />
+                    {/* Email + Confirm Email */}
+                    <div className="space-y-4">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="donor-email" className="text-xs font-semibold">Correo electrónico *</Label>
+                          <Input id="donor-email" type="email" placeholder="tu@email.com" value={formData.email}
+                            onChange={(e) => handleEmailChange("email", e.target.value)} disabled={isSubmitting} required />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="donor-confirmEmail" className="text-xs font-semibold">Confirmar correo *</Label>
+                          <Input
+                            id="donor-confirmEmail"
+                            type="email"
+                            placeholder="Repite tu correo"
+                            value={formData.confirmEmail}
+                            onChange={(e) => handleEmailChange("confirmEmail", e.target.value)}
+                            disabled={isSubmitting}
+                            required
+                            className={fieldErrors.confirmEmail ? "border-destructive" : ""}
+                          />
+                          {fieldErrors.confirmEmail && (
+                            <p className="text-xs text-destructive">{fieldErrors.confirmEmail}</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="donor-phone" className="text-xs font-semibold">Teléfono</Label>
-                        <Input id="donor-phone" placeholder="+502 0000-0000" value={formData.phone}
-                          onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))} disabled={isSubmitting} />
-                      </div>
+                      <p className="text-xs text-muted-foreground -mt-2">
+                        Verifica que tu correo esté bien escrito. Te enviaremos la confirmación a este correo.
+                      </p>
                     </div>
 
+                    {/* NIT */}
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <Label htmlFor="donor-nit" className="text-xs font-semibold">NIT</Label>
@@ -482,6 +560,45 @@ const Donar = () => {
                         onChange={(e) => setFormData((p) => ({ ...p, nit: e.target.value }))} disabled={isSubmitting} />
                     </div>
 
+                    {/* Country + Phone */}
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="donor-country" className="text-xs font-semibold">País *</Label>
+                        <Select value={formData.country} onValueChange={handleCountryChange} disabled={isSubmitting}>
+                          <SelectTrigger id="donor-country">
+                            <SelectValue placeholder="Selecciona país" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {countries.map((c) => (
+                              <SelectItem key={c.code} value={c.code}>
+                                {c.flag} {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="donor-phone" className="text-xs font-semibold">Teléfono</Label>
+                        <div className="flex gap-2">
+                          <div className="flex items-center gap-1 px-3 rounded-md border border-input bg-muted text-sm text-muted-foreground shrink-0 h-10">
+                            <span>{selectedCountry.flag}</span>
+                            <span className="font-medium">{selectedCountry.dialCode}</span>
+                          </div>
+                          <Input
+                            id="donor-phone"
+                            placeholder={selectedCountry.phoneLength ? "0".repeat(selectedCountry.phoneLength) : "Número"}
+                            value={formData.phone}
+                            onChange={(e) => handlePhoneChange(e.target.value)}
+                            disabled={isSubmitting}
+                            className={fieldErrors.phone ? "border-destructive" : ""}
+                          />
+                        </div>
+                        {fieldErrors.phone && (
+                          <p className="text-xs text-destructive">{fieldErrors.phone}</p>
+                        )}
+                      </div>
+                    </div>
+
                     {/* Billing Address */}
                     <div className="pt-2 border-t border-border">
                       <Label className="mb-3 block text-xs uppercase tracking-wider text-muted-foreground font-semibold">
@@ -496,7 +613,36 @@ const Donar = () => {
                             onChange={(e) => setFormData((p) => ({ ...p, address: e.target.value }))}
                             disabled={isSubmitting} required={paymentMethod === "tarjeta"} />
                         </div>
+                        {/* Country → Department → City order */}
                         <div className="grid sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="donor-department" className="text-xs font-semibold">
+                              Departamento/Estado {paymentMethod === "tarjeta" && "*"}
+                            </Label>
+                            {availableDepartments.length > 0 ? (
+                              <Select value={formData.department}
+                                onValueChange={(v) => setFormData((p) => ({ ...p, department: v }))}
+                                disabled={isSubmitting}>
+                                <SelectTrigger id="donor-department">
+                                  <SelectValue placeholder="Selecciona" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableDepartments.map((dept) => (
+                                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                id="donor-department"
+                                placeholder="Estado o provincia"
+                                value={formData.department}
+                                onChange={(e) => setFormData((p) => ({ ...p, department: e.target.value }))}
+                                disabled={isSubmitting}
+                                required={paymentMethod === "tarjeta"}
+                              />
+                            )}
+                          </div>
                           <div className="space-y-1.5">
                             <Label htmlFor="donor-city" className="text-xs font-semibold">
                               Ciudad {paymentMethod === "tarjeta" && "*"}
@@ -504,23 +650,6 @@ const Donar = () => {
                             <Input id="donor-city" placeholder="Tu ciudad" value={formData.city}
                               onChange={(e) => setFormData((p) => ({ ...p, city: e.target.value }))}
                               disabled={isSubmitting} required={paymentMethod === "tarjeta"} />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="donor-department" className="text-xs font-semibold">
-                              Departamento {paymentMethod === "tarjeta" && "*"}
-                            </Label>
-                            <Select value={formData.department}
-                              onValueChange={(v) => setFormData((p) => ({ ...p, department: v }))}
-                              disabled={isSubmitting}>
-                              <SelectTrigger id="donor-department">
-                                <SelectValue placeholder="Selecciona" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {guatemalaDepartments.map((dept) => (
-                                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
                           </div>
                         </div>
                       </div>
@@ -775,6 +904,12 @@ const Donar = () => {
                 <span className="text-muted-foreground">Correo</span>
                 <span className="font-medium">{formData.email}</span>
               </div>
+              {phoneE164 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Teléfono</span>
+                  <span className="font-medium">{phoneE164}</span>
+                </div>
+              )}
               {formData.nit && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">NIT</span>
