@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
  * cybersource-return: Receives the Cybersource Secure Acceptance POST redirect.
@@ -106,6 +107,88 @@ serve(async (req) => {
 
     // --- On success: send notification emails ---
     if (isSuccess) {
+      // --- Persist donation to database ---
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL");
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+        if (supabaseUrl && serviceRoleKey) {
+          const sb = createClient(supabaseUrl, serviceRoleKey);
+          const donorName = `${billForename} ${billSurname}`.trim() || "Donante anónimo";
+          const parsedAmount = parseFloat(amount) || 0;
+
+          // Upsert donor by email
+          let donorId: string | null = null;
+          if (billEmail) {
+            const { data: existingDonor } = await sb
+              .from("donors")
+              .select("id")
+              .eq("email", billEmail)
+              .maybeSingle();
+
+            if (existingDonor) {
+              donorId = existingDonor.id;
+              await sb.from("donors").update({
+                name: donorName,
+                last_donation_at: new Date().toISOString(),
+                donation_count: (existingDonor as any).donation_count ? (existingDonor as any).donation_count + 1 : 1,
+              }).eq("id", donorId);
+            } else {
+              const { data: newDonor } = await sb.from("donors").insert({
+                email: billEmail,
+                name: donorName,
+                first_donation_at: new Date().toISOString(),
+                last_donation_at: new Date().toISOString(),
+                donation_count: 1,
+                total_donated: parsedAmount,
+              }).select("id").single();
+              if (newDonor) donorId = newDonor.id;
+            }
+          }
+
+          // Check for duplicate donation by reference
+          const { data: existingDonation } = await sb
+            .from("donations")
+            .select("id")
+            .eq("notes", refNumber)
+            .maybeSingle();
+
+          if (!existingDonation) {
+            await sb.from("donations").insert({
+              donor_id: donorId,
+              donor_email: billEmail || "unknown@donation.web",
+              donor_name: donorName,
+              amount: parsedAmount,
+              status: "confirmed",
+              source: "web",
+              payment_method: "tarjeta",
+              donation_type: "unica",
+              notes: refNumber,
+              confirmed_at: new Date().toISOString(),
+            });
+            console.log("Donation persisted:", refNumber);
+
+            // Update donor total
+            if (donorId) {
+              const { data: donorDonations } = await sb
+                .from("donations")
+                .select("amount")
+                .eq("donor_id", donorId);
+              if (donorDonations) {
+                const total = donorDonations.reduce((sum: number, d: any) => sum + parseFloat(d.amount), 0);
+                await sb.from("donors").update({ total_donated: total }).eq("id", donorId);
+              }
+            }
+          } else {
+            console.log("Donation already exists for ref:", refNumber);
+          }
+        }
+      } catch (dbErr) {
+        console.error("Error persisting donation:", dbErr);
+        // Never block user flow for DB errors
+      }
+
+      // --- Send notification emails ---
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL");
         const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -137,14 +220,13 @@ serve(async (req) => {
             const errText = await resp.text();
             console.error("notify-donation call failed:", resp.status, errText);
           } else {
-            await resp.text(); // consume body
+            await resp.text();
             console.log("notify-donation sent successfully");
           }
         } else {
           console.error("SUPABASE_URL or SUPABASE_ANON_KEY not set, skipping notification");
         }
       } catch (emailErr) {
-        // Never block the user flow for email failures
         console.error("Error calling notify-donation:", emailErr);
       }
     }
