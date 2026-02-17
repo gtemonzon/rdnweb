@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
-import { Heart, Users, Shield, BookOpen, ArrowRight, HandHeart } from "lucide-react";
+import { Heart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CountUpStat from "@/components/CountUpStat";
 import PartnersCarousel from "@/components/PartnersCarousel";
+import HeroSection from "@/components/home/HeroSection";
+import ImpactSection from "@/components/home/ImpactSection";
 import misionImage from "@/assets/mision-refugio.png";
 import visionImageAsset from "@/assets/vision-refugio.png";
 
@@ -26,36 +28,6 @@ const defaultStats: StatItem[] = [
   { number: "50000+", label: "Niños atendidos" },
   { number: "6", label: "Programas activos" },
   { number: "200+", label: "Profesionales" },
-];
-
-const programs = [
-  {
-    icon: Shield,
-    title: "Protección Especial",
-    description: "Atención integral a víctimas de violencia, trata y explotación.",
-  },
-  {
-    icon: Users,
-    title: "Programa Social",
-    description: "Fortalecimiento familiar y comunitario para la prevención.",
-  },
-  {
-    icon: BookOpen,
-    title: "Prevención",
-    description: "Educación y sensibilización para prevenir la violencia.",
-  },
-  {
-    icon: HandHeart,
-    title: "Incidencia",
-    description: "Políticas públicas para la protección de la niñez.",
-  },
-];
-
-// Stock images for the hero and sections
-const heroImages = [
-  "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800&q=80",
-  "https://images.unsplash.com/photo-1509099836639-18ba1795216d?w=800&q=80",
-  "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=800&q=80",
 ];
 
 const Index = () => {
@@ -119,62 +91,21 @@ const Index = () => {
   const missionText =
     missionData?.text ||
     "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
-  const missionImageUrl =
-    missionData?.image_url || misionImage;
+  const missionImageUrl = missionData?.image_url || misionImage;
   const visionText =
     visionData?.text ||
     "Ser la organización líder en Guatemala en la protección integral de los derechos de la niñez y adolescencia, contribuyendo a una sociedad donde todos los niños y niñas vivan libres de violencia.";
-  const visionImageUrl =
-    visionData?.image_url || visionImageAsset;
+  const visionImageUrl = visionData?.image_url || visionImageAsset;
 
   return (
     <Layout>
-      {/* Hero Section with Background Image */}
-      <section className="relative min-h-[80vh] flex items-center overflow-hidden">
-        {/* Background GIF with blur effect */}
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="/images/hero-kids.gif" 
-            alt="Niños felices" 
-            className="w-full h-full object-cover blur-sm scale-105" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/70 to-primary/50" />
-        </div>
+      {/* Hero Section */}
+      <HeroSection />
 
-        <div className="container relative z-10">
-          <div className="max-w-2xl animate-fade-in">
-            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 text-balance drop-shadow-lg">
-              Protegemos los derechos de la <span className="text-accent">niñez</span> guatemalteca
-            </h1>
-            <p className="text-lg md:text-xl text-white/90 mb-8 max-w-xl drop-shadow">
-              Desde hace más de 16 años trabajamos por la restitución de derechos de niños, niñas y adolescentes
-              víctimas de violencia y explotación.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg" asChild>
-                <Link to="/donar">
-                  <Heart className="w-5 h-5 mr-2" />
-                  Donar Ahora
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-white/10 border-white text-white hover:bg-white/20 backdrop-blur-sm"
-                asChild
-              >
-                <Link to="/quienes-somos">
-                  Conoce Nuestra Historia
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
+      {/* Impact Pillars */}
+      <ImpactSection />
 
-      </section>
-
-      {/* Stats Section with Count Up Animation */}
+      {/* Stats Section */}
       <section className="py-16 bg-primary text-primary-foreground">
         <div className="container">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
@@ -185,12 +116,12 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Mission Section with Parallax Background */}
-      <section 
+      {/* Mission Section */}
+      <section
         className="relative py-32 bg-fixed bg-cover bg-center"
         style={{ backgroundImage: `url(${missionImageUrl})` }}
       >
-        <div className="absolute inset-0 bg-black/60"></div>
+        <div className="absolute inset-0 bg-black/60" />
         <div className="container relative z-10">
           <div className="max-w-3xl">
             <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Misión</span>
@@ -202,12 +133,12 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Vision Section with Parallax Background */}
-      <section 
+      {/* Vision Section */}
+      <section
         className="relative py-32 bg-fixed bg-cover bg-center"
         style={{ backgroundImage: `url(${visionImageUrl})` }}
       >
-        <div className="absolute inset-0 bg-black/60"></div>
+        <div className="absolute inset-0 bg-black/60" />
         <div className="container relative z-10">
           <div className="max-w-3xl ml-auto text-right">
             <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Visión</span>
@@ -219,45 +150,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Programs Section */}
-      <section className="py-20 bg-muted">
-        <div className="container">
-          <div className="text-center mb-12">
-            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Lo que hacemos</span>
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-foreground mt-2 mb-4">
-              Nuestros Programas
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Trabajamos a través de programas especializados para brindar atención integral a la niñez y adolescencia.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {programs.map((program, index) => (
-              <div
-                key={program.title}
-                className="bg-card rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary group-hover:scale-110 transition-all duration-300">
-                  <program.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors" />
-                </div>
-                <h3 className="font-heading font-semibold text-lg mb-2">{program.title}</h3>
-                <p className="text-sm text-muted-foreground">{program.description}</p>
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-10">
-            <Button variant="outline" size="lg" asChild>
-              <Link to="/programas">
-                Ver Todos los Programas
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section with Background Image */}
+      {/* CTA Section */}
       <section className="relative py-24 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img
