@@ -67,7 +67,10 @@ const AnimatedStat = ({
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
               }
-            : undefined
+            : {
+                color: "#FFFFFF",
+                textShadow: "0 2px 12px rgba(0,0,0,0.3)",
+              }
         }
       >
         {formattedCount}
@@ -77,7 +80,7 @@ const AnimatedStat = ({
         className={`font-heading font-bold mt-2 ${
           isHero
             ? "text-lg sm:text-xl md:text-2xl text-white"
-            : "text-base md:text-lg text-white/90"
+            : "text-base md:text-lg text-white"
         }`}
       >
         {stat.label}
@@ -87,7 +90,7 @@ const AnimatedStat = ({
         className={`mt-1 italic ${
           isHero
             ? "text-sm md:text-base text-white/60"
-            : "text-xs md:text-sm text-white/50"
+            : "text-xs md:text-sm text-white/70"
         }`}
       >
         {stat.micro}
