@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Save, Plus, Trash2, Loader2, ArrowLeft } from "lucide-react";
 import ImageUpload from "@/components/ImageUpload";
 import LegalEditor from "@/components/admin/LegalEditor";
+import FaqEditor from "@/components/admin/FaqEditor";
 
 interface StatItem {
   number: string;
@@ -109,12 +110,13 @@ const AdminContenido = () => {
         </div>
 
         <Tabs defaultValue="stats" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="stats">Estadísticas</TabsTrigger>
             <TabsTrigger value="mission">Misión/Visión</TabsTrigger>
             <TabsTrigger value="values">Valores</TabsTrigger>
             <TabsTrigger value="timeline">Historia</TabsTrigger>
             <TabsTrigger value="contact">Contacto</TabsTrigger>
+            <TabsTrigger value="faq">FAQ</TabsTrigger>
             <TabsTrigger value="legal">Legal</TabsTrigger>
           </TabsList>
 
@@ -158,6 +160,10 @@ const AdminContenido = () => {
               onSave={(content) => updateMutation.mutate({ sectionKey: "contact_info", content: JSON.parse(JSON.stringify(content)) })}
               isSaving={updateMutation.isPending}
             />
+          </TabsContent>
+
+          <TabsContent value="faq">
+            <FaqEditor />
           </TabsContent>
 
           <TabsContent value="legal">
