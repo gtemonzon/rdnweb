@@ -92,16 +92,20 @@ const Index = () => {
       <CtaSection />
 
       {/* Partners Section */}
-      <section className="py-16 lg:min-h-screen lg:flex lg:items-center bg-card">
-        <div className="container w-full">
-          <div className="text-center mb-10">
-            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Alianzas</span>
-            <h2 className="font-heading text-2xl md:text-3xl font-semibold text-foreground mt-2 mb-2">
+      <section className="py-20 md:py-28 bg-muted">
+        <div className="container">
+          <div className="text-center mb-12">
+            <span className="text-primary font-semibold text-xs uppercase tracking-[0.2em]">Alianzas</span>
+            <h2 className="font-heading text-2xl md:text-3xl font-semibold text-foreground mt-2 mb-3">
               Socios Cooperantes
             </h2>
-            <p className="text-muted-foreground">Trabajamos junto a organizaciones comprometidas con la niñez</p>
+            <p className="text-muted-foreground max-w-xl mx-auto">
+              Trabajamos junto a organizaciones nacionales e internacionales comprometidas con la protección de la niñez
+            </p>
           </div>
-          <PartnersCarousel partners={partners || []} />
+          <div className="max-w-5xl mx-auto">
+            <PartnersCarousel partners={partners || []} />
+          </div>
         </div>
       </section>
     </Layout>
