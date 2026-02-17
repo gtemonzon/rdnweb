@@ -4,17 +4,12 @@ import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import CountUpStat from "@/components/CountUpStat";
 import PartnersCarousel from "@/components/PartnersCarousel";
 import HeroSection from "@/components/home/HeroSection";
 import ImpactSection from "@/components/home/ImpactSection";
+import ImpactStatsSection from "@/components/home/ImpactStatsSection";
 import misionImage from "@/assets/mision-refugio.png";
 import visionImageAsset from "@/assets/vision-refugio.png";
-
-interface StatItem {
-  number: string;
-  label: string;
-}
 
 interface Partner {
   id: string;
@@ -23,28 +18,7 @@ interface Partner {
   website_url: string | null;
 }
 
-const defaultStats: StatItem[] = [
-  { number: "30+", label: "Años de experiencia" },
-  { number: "50000+", label: "Niños atendidos" },
-  { number: "6", label: "Programas activos" },
-  { number: "200+", label: "Profesionales" },
-];
-
 const Index = () => {
-  // Fetch stats from database
-  const { data: statsData } = useQuery({
-    queryKey: ["site-content", "home_stats"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_content")
-        .select("content")
-        .eq("section_key", "home_stats")
-        .single();
-      if (error) throw error;
-      return data?.content as unknown as StatItem[] | null;
-    },
-  });
-
   // Fetch mission from database
   const { data: missionData } = useQuery({
     queryKey: ["site-content", "mission"],
@@ -87,7 +61,6 @@ const Index = () => {
     },
   });
 
-  const stats = statsData || defaultStats;
   const missionText =
     missionData?.text ||
     "Somos una organización guatemalteca que trabaja por la protección, restitución y defensa de los derechos de niños, niñas y adolescentes víctimas de cualquier forma de violencia, abuso, negligencia y explotación.";
@@ -105,16 +78,8 @@ const Index = () => {
       {/* Impact Pillars */}
       <ImpactSection />
 
-      {/* Stats Section */}
-      <section className="py-16 bg-primary text-primary-foreground">
-        <div className="container">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {stats.map((stat) => (
-              <CountUpStat key={stat.label} number={stat.number} label={stat.label} />
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Impact & Results */}
+      <ImpactStatsSection />
 
       {/* Mission Section */}
       <section
