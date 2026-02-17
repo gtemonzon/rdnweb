@@ -68,6 +68,7 @@ const Footer = () => {
                 { name: "Programas", href: "/programas" },
                 { name: "Transparencia", href: "/transparencia" },
                 { name: "Blog", href: "/blog" },
+                { name: "Preguntas Frecuentes", href: "/preguntas-frecuentes" },
                 { name: "Contacto", href: "/contacto" },
               ].map((link) => (
                 <li key={link.href}>

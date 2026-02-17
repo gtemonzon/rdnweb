@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Mail, Phone, MapPin, Clock, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -269,7 +270,9 @@ const Contacto = () => {
               Consulta nuestra sección de preguntas frecuentes para encontrar respuestas rápidas a las dudas más
               comunes.
             </p>
-            <Button variant="outline">Ver Preguntas Frecuentes</Button>
+            <Button variant="outline" asChild>
+              <Link to="/preguntas-frecuentes">Ver Preguntas Frecuentes</Link>
+            </Button>
           </div>
         </div>
       </section>
