@@ -100,7 +100,7 @@ const HeroSection = () => {
           <Button
             size="lg"
             variant="outline"
-            className="border-white/60 text-white hover:bg-white/15 backdrop-blur-sm text-base md:text-lg px-8 py-6 rounded-full"
+            className="bg-white text-primary border-white hover:bg-white/90 text-base md:text-lg px-8 py-6 rounded-full font-semibold"
             asChild
           >
             <Link to="/programas">
