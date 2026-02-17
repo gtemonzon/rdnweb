@@ -80,10 +80,7 @@ const Admin = () => {
   const togglePublish = async (id: string, currentStatus: boolean) => {
     const { error } = await supabase
       .from("blog_posts")
-      .update({ 
-        published: !currentStatus,
-        published_at: !currentStatus ? new Date().toISOString() : null
-      })
+      .update({ published: !currentStatus })
       .eq("id", id);
 
     if (error) {
