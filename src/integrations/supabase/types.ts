@@ -818,6 +818,15 @@ export type Database = {
           status: string
         }[]
       }
+      get_public_donation_settings: {
+        Args: never
+        Returns: {
+          min_amount: number
+          min_amount_usd: number
+          suggested_amounts: Json
+          suggested_amounts_usd: Json
+        }[]
+      }
       has_blog_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
