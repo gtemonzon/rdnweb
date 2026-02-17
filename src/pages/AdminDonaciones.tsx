@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import Layout from "@/components/layout/Layout";
+import AdminLayout from "@/components/layout/AdminLayout";
 import {
   ArrowLeft, Plus, Heart, Search, Download, CheckCircle, Clock, XCircle,
   Receipt, Eye, Settings, ArrowUpDown, ArrowUp, ArrowDown, FileText,
@@ -301,37 +301,30 @@ const AdminDonaciones = () => {
   const canCreate = userRole === "admin" || hasPermission("donations", "can_create");
   const canEdit = userRole === "admin" || hasPermission("donations", "can_edit_all");
 
-  if (loading) return <Layout><div className="min-h-[60vh] flex items-center justify-center"><p>Cargando...</p></div></Layout>;
+  if (loading) return <AdminLayout><div className="min-h-[60vh] flex items-center justify-center"><p>Cargando...</p></div></AdminLayout>;
   if (!user) return null;
 
   if (userRole !== "admin" && !hasPermission("donations", "can_view")) {
     return (
-      <Layout>
-        <section className="py-20 min-h-[60vh]">
-          <div className="container text-center">
-            <Heart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-            <h1 className="font-heading text-2xl font-bold text-foreground mb-4">Acceso Restringido</h1>
-            <p className="text-muted-foreground mb-6">No tienes permisos para acceder al módulo de donaciones.</p>
-            <Button asChild variant="outline"><Link to="/admin"><ArrowLeft className="w-4 h-4 mr-2" />Volver al Panel</Link></Button>
-          </div>
-        </section>
-      </Layout>
+      <AdminLayout>
+        <div className="text-center py-20">
+          <Heart className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+          <h1 className="font-heading text-2xl font-bold text-foreground mb-4">Acceso Restringido</h1>
+          <p className="text-muted-foreground">No tienes permisos para acceder al módulo de donaciones.</p>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <Layout>
-      <section className="py-12">
-        <div className="container">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-foreground flex items-center gap-3">
-                <Heart className="w-8 h-8" />Gestión de Donaciones
-              </h1>
-              <p className="text-muted-foreground">Administra y registra las donaciones recibidas</p>
-            </div>
-            <Button asChild variant="outline"><Link to="/admin"><ArrowLeft className="w-4 h-4 mr-2" />Volver</Link></Button>
-          </div>
+    <AdminLayout>
+      <div>
+        <div className="mb-8">
+          <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+            <Heart className="w-8 h-8" />Gestión de Donaciones
+          </h1>
+          <p className="text-muted-foreground">Administra y registra las donaciones recibidas</p>
+        </div>
 
           <Tabs defaultValue="donations" className="space-y-6">
             <TabsList>
@@ -565,9 +558,8 @@ const AdminDonaciones = () => {
               <DonationSettingsPanel />
             </TabsContent>
           </Tabs>
-        </div>
-      </section>
-    </Layout>
+      </div>
+    </AdminLayout>
   );
 };
 

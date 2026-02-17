@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate, Link } from "react-router-dom";
-import Layout from "@/components/layout/Layout";
+import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,11 +82,11 @@ const AdminContenido = () => {
 
   if (authLoading) {
     return (
-      <Layout>
-        <div className="container py-20 flex justify-center">
+      <AdminLayout>
+        <div className="flex justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </AdminLayout>
     );
   }
 
@@ -97,23 +97,15 @@ const AdminContenido = () => {
   const getSection = (key: string) => contentSections?.find(s => s.section_key === key);
 
   return (
-    <Layout>
-      <div className="container py-12">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="font-heading text-3xl font-bold text-foreground">
-              Gestión de Contenido
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Administra el contenido estático del sitio web
-            </p>
-          </div>
-          <Button asChild variant="outline">
-            <Link to="/admin">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver
-            </Link>
-          </Button>
+    <AdminLayout>
+      <div>
+        <div className="mb-8">
+          <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
+            Gestión de Contenido
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Administra el contenido estático del sitio web
+          </p>
         </div>
 
         <Tabs defaultValue="stats" className="space-y-6">
@@ -179,7 +171,7 @@ const AdminContenido = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </Layout>
+    </AdminLayout>
   );
 };
 

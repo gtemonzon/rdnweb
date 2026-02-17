@@ -4,8 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import Layout from "@/components/layout/Layout";
-import { Plus, Edit, Trash2, Eye, EyeOff, LogOut, Users, FileText, Handshake, Receipt, Heart, Scale, Briefcase } from "lucide-react";
+import AdminLayout from "@/components/layout/AdminLayout";
+import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -38,7 +38,7 @@ interface BlogPost {
 }
 
 const Admin = () => {
-  const { user, userRole, hasPermission, getCustomSettings, loading, signOut } = useAuth();
+  const { user, userRole, hasPermission, getCustomSettings, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -119,10 +119,6 @@ const Admin = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
 
   // Check if user can edit a specific post
   const canEditPost = (post: BlogPost) => {
@@ -144,116 +140,27 @@ const Admin = () => {
     return blogSettings.allowed_categories.includes(category);
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="min-h-[60vh] flex items-center justify-center">
-          <p>Cargando...</p>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  if (userRole !== "admin" && userRole !== "editor") {
-    return (
-      <Layout>
-        <section className="py-20 min-h-[60vh]">
-          <div className="container text-center">
-            <h1 className="font-heading text-2xl font-bold text-foreground mb-4">
-              Sin permisos
-            </h1>
-            <p className="text-muted-foreground mb-6">
-              No tienes permisos para acceder al panel de administración. 
-              Contacta al administrador para obtener acceso.
-            </p>
-            <Button onClick={handleSignOut} variant="outline">
-              <LogOut className="w-4 h-4 mr-2" />
-              Cerrar Sesión
-            </Button>
-          </div>
-        </section>
-      </Layout>
-    );
-  }
-
   return (
-    <Layout>
-      <section className="py-12">
-        <div className="container">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-foreground">
-                Panel de Administración
-              </h1>
-              <p className="text-muted-foreground">
-                Gestiona el contenido del blog
-              </p>
-            </div>
-            <div className="flex gap-4">
-              {hasPermission('blog', 'can_create') && (
-                <Button asChild>
-                  <Link to="/admin/nuevo">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nuevo Artículo
-                  </Link>
-                </Button>
-              )}
-              {userRole === "admin" && (
-                <>
-                  <Button asChild variant="secondary">
-                    <Link to="/admin/contenido">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Contenido
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary">
-                    <Link to="/admin/aliados">
-                      <Handshake className="w-4 h-4 mr-2" />
-                      Aliados
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary">
-                    <Link to="/admin/donaciones">
-                      <Heart className="w-4 h-4 mr-2" />
-                      Donaciones
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary">
-                    <Link to="/admin/recibos">
-                      <Receipt className="w-4 h-4 mr-2" />
-                      Recibos FEL
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary">
-                    <Link to="/admin/transparencia">
-                      <Scale className="w-4 h-4 mr-2" />
-                      Transparencia
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary">
-                    <Link to="/admin/vacantes">
-                      <Briefcase className="w-4 h-4 mr-2" />
-                      Vacantes
-                    </Link>
-                  </Button>
-                  <Button asChild variant="secondary">
-                    <Link to="/admin/usuarios">
-                      <Users className="w-4 h-4 mr-2" />
-                      Usuarios
-                    </Link>
-                  </Button>
-                </>
-              )}
-              <Button variant="outline" onClick={handleSignOut}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Salir
-              </Button>
-            </div>
+    <AdminLayout>
+      <div>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
+              Blog
+            </h1>
+            <p className="text-muted-foreground">
+              Gestiona los artículos del blog
+            </p>
           </div>
+          {hasPermission('blog', 'can_create') && (
+            <Button asChild>
+              <Link to="/admin/nuevo">
+                <Plus className="w-4 h-4 mr-2" />
+                Nuevo Artículo
+              </Link>
+            </Button>
+          )}
+        </div>
 
           {loadingPosts ? (
             <p>Cargando artículos...</p>
@@ -352,9 +259,8 @@ const Admin = () => {
               </Table>
             </div>
           )}
-        </div>
-      </section>
-    </Layout>
+      </div>
+    </AdminLayout>
   );
 };
 
