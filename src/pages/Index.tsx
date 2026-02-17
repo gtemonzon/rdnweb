@@ -8,6 +8,7 @@ import PartnersCarousel from "@/components/PartnersCarousel";
 import HeroSection from "@/components/home/HeroSection";
 import ImpactSection from "@/components/home/ImpactSection";
 import ImpactStatsSection from "@/components/home/ImpactStatsSection";
+import MissionVisionSection from "@/components/home/MissionVisionSection";
 import misionImage from "@/assets/mision-refugio.png";
 import visionImageAsset from "@/assets/vision-refugio.png";
 
@@ -81,39 +82,13 @@ const Index = () => {
       {/* Impact & Results */}
       <ImpactStatsSection />
 
-      {/* Mission Section */}
-      <section
-        className="relative py-32 bg-fixed bg-cover bg-center"
-        style={{ backgroundImage: `url(${missionImageUrl})` }}
-      >
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="container relative z-10">
-          <div className="max-w-3xl">
-            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Misión</span>
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mt-2 mb-6">
-              Protección integral para la niñez
-            </h2>
-            <p className="text-lg text-white/90 leading-relaxed">{missionText}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Vision Section */}
-      <section
-        className="relative py-32 bg-fixed bg-cover bg-center"
-        style={{ backgroundImage: `url(${visionImageUrl})` }}
-      >
-        <div className="absolute inset-0 bg-black/60" />
-        <div className="container relative z-10">
-          <div className="max-w-3xl ml-auto text-right">
-            <span className="text-primary font-semibold text-sm uppercase tracking-wider">Nuestra Visión</span>
-            <h2 className="font-heading text-3xl md:text-4xl font-bold text-white mt-2 mb-6">
-              Un futuro sin violencia
-            </h2>
-            <p className="text-lg text-white/90 leading-relaxed">{visionText}</p>
-          </div>
-        </div>
-      </section>
+      {/* Mission & Vision */}
+      <MissionVisionSection
+        missionText={missionText}
+        missionImageUrl={missionImageUrl}
+        visionText={visionText}
+        visionImageUrl={visionImageUrl}
+      />
 
       {/* CTA Section */}
       <section className="relative py-24 overflow-hidden">
