@@ -722,6 +722,107 @@ export type Database = {
         }
         Relationships: []
       }
+      stat_assets: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          image_url: string
+          order_index: number
+          stat_post_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          order_index?: number
+          stat_post_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          order_index?: number
+          stat_post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stat_assets_stat_post_id_fkey"
+            columns: ["stat_post_id"]
+            isOneToOne: false
+            referencedRelation: "stat_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stat_posts: {
+        Row: {
+          author_id: string | null
+          category: string
+          content: string | null
+          cover_image_url: string | null
+          created_at: string
+          cutoff_date: string | null
+          id: string
+          methodology_notes: string | null
+          period_end: string | null
+          period_start: string | null
+          published: boolean
+          published_at: string | null
+          slug: string
+          source_name: string | null
+          source_url: string | null
+          summary: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          category?: string
+          content?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          cutoff_date?: string | null
+          id?: string
+          methodology_notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          published?: boolean
+          published_at?: string | null
+          slug: string
+          source_name?: string | null
+          source_url?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          category?: string
+          content?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          cutoff_date?: string | null
+          id?: string
+          methodology_notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          published?: boolean
+          published_at?: string | null
+          slug?: string
+          source_name?: string | null
+          source_url?: string | null
+          summary?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       transparency_documents: {
         Row: {
           created_at: string
