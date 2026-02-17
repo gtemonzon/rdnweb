@@ -174,7 +174,6 @@ const AdminPostEditor = () => {
       youtube_url: youtubeUrl || null,
       category,
       published: canPublish ? published : false,
-      published_at: published && canPublish ? new Date().toISOString() : null,
       author_id: user?.id,
     };
 
