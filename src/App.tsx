@@ -31,6 +31,8 @@ const AdminVacantes = lazy(() => import("./pages/AdminVacantes"));
 const AdminCybersource = lazy(() => import("./pages/AdminCybersource"));
 const PaymentReturn = lazy(() => import("./pages/PaymentReturn"));
 const GraciasDonacion = lazy(() => import("./pages/GraciasDonacion"));
+const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
+const TerminosUso = lazy(() => import("./pages/TerminosUso"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -77,6 +79,8 @@ const App = () => (
               <Route path="/payment-return" element={<PaymentReturn />} />
               <Route path="/resultado" element={<PaymentReturn />} />
               <Route path="/gracias" element={<GraciasDonacion />} />
+              <Route path="/privacidad" element={<PoliticaPrivacidad />} />
+              <Route path="/terminos" element={<TerminosUso />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
