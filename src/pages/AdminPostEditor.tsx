@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import Layout from "@/components/layout/Layout";
+import AdminLayout from "@/components/layout/AdminLayout";
 import { ArrowLeft, Save } from "lucide-react";
 import { Link } from "react-router-dom";
 import { allBlogCategories, BlogCustomSettings } from "@/types/permissions";
@@ -225,11 +225,11 @@ const AdminPostEditor = () => {
 
   if (authLoading) {
     return (
-      <Layout>
+      <AdminLayout>
         <div className="min-h-[60vh] flex items-center justify-center">
           <p>Cargando...</p>
         </div>
-      </Layout>
+      </AdminLayout>
     );
   }
 
@@ -238,20 +238,13 @@ const AdminPostEditor = () => {
   }
 
   return (
-    <Layout>
-      <section className="py-12">
-        <div className="container max-w-3xl">
-          <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/admin">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver
-              </Link>
-            </Button>
-            <h1 className="font-heading text-2xl font-bold text-foreground">
-              {isEditing ? "Editar Artículo" : "Nuevo Artículo"}
-            </h1>
-          </div>
+    <AdminLayout>
+      <div className="max-w-3xl">
+        <div className="mb-8">
+          <h1 className="font-heading text-2xl font-bold text-foreground">
+            {isEditing ? "Editar Artículo" : "Nuevo Artículo"}
+          </h1>
+        </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-card rounded-lg p-6 shadow space-y-4">
@@ -366,9 +359,8 @@ const AdminPostEditor = () => {
               </div>
             </div>
           </form>
-        </div>
-      </section>
-    </Layout>
+      </div>
+    </AdminLayout>
   );
 };
 

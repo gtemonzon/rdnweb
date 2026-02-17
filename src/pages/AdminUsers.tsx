@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import Layout from "@/components/layout/Layout";
+import AdminLayout from "@/components/layout/AdminLayout";
 import { ArrowLeft, Shield, UserCog, Trash2, Settings } from "lucide-react";
 import {
   Table,
@@ -445,11 +445,11 @@ const AdminUsers = () => {
 
   if (loading) {
     return (
-      <Layout>
+      <AdminLayout>
         <div className="min-h-[60vh] flex items-center justify-center">
           <p>Cargando...</p>
         </div>
-      </Layout>
+      </AdminLayout>
     );
   }
 
@@ -459,49 +459,32 @@ const AdminUsers = () => {
 
   if (userRole !== "admin") {
     return (
-      <Layout>
-        <section className="py-20 min-h-[60vh]">
-          <div className="container text-center">
-            <Shield className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-            <h1 className="font-heading text-2xl font-bold text-foreground mb-4">
-              Acceso Restringido
-            </h1>
-            <p className="text-muted-foreground mb-6">
-              Solo los administradores pueden gestionar usuarios y roles.
-            </p>
-            <Button asChild variant="outline">
-              <Link to="/admin">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver al Panel
-              </Link>
-            </Button>
-          </div>
-        </section>
-      </Layout>
+      <AdminLayout>
+        <div className="text-center py-20">
+          <Shield className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+          <h1 className="font-heading text-2xl font-bold text-foreground mb-4">
+            Acceso Restringido
+          </h1>
+          <p className="text-muted-foreground">
+            Solo los administradores pueden gestionar usuarios y roles.
+          </p>
+        </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <Layout>
-      <section className="py-12">
-        <div className="container">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="font-heading text-3xl font-bold text-foreground flex items-center gap-3">
-                <UserCog className="w-8 h-8" />
-                Gestión de Usuarios
-              </h1>
-              <p className="text-muted-foreground">
-                Asigna roles y permisos modulares a los usuarios
-              </p>
-            </div>
-            <Button asChild variant="outline">
-              <Link to="/admin">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver
-              </Link>
-            </Button>
-          </div>
+    <AdminLayout>
+      <div>
+        <div className="mb-8">
+          <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+            <UserCog className="w-8 h-8" />
+            Gestión de Usuarios
+          </h1>
+          <p className="text-muted-foreground">
+            Asigna roles y permisos modulares a los usuarios
+          </p>
+        </div>
 
           {loadingUsers ? (
             <p>Cargando usuarios...</p>
@@ -757,9 +740,8 @@ const AdminUsers = () => {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    </Layout>
+      </div>
+    </AdminLayout>
   );
 };
 
