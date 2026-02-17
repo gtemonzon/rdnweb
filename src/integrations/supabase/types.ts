@@ -811,6 +811,13 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      get_donation_status: {
+        Args: { ref_number: string }
+        Returns: {
+          confirmed_at: string
+          status: string
+        }[]
+      }
       has_blog_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
