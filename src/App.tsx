@@ -32,6 +32,7 @@ const AdminCybersource = lazy(() => import("./pages/AdminCybersource"));
 const PaymentReturn = lazy(() => import("./pages/PaymentReturn"));
 const GraciasDonacion = lazy(() => import("./pages/GraciasDonacion"));
 const PreguntasFrecuentes = lazy(() => import("./pages/PreguntasFrecuentes"));
+const StatPostDetail = lazy(() => import("./pages/StatPostDetail"));
 const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
 const TerminosUso = lazy(() => import("./pages/TerminosUso"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/quienes-somos" element={<QuienesSomos />} />
               <Route path="/programas" element={<Programas />} />
               <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/estadisticas/:slug" element={<StatPostDetail />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/transparencia" element={<Transparencia />} />
               <Route path="/vacantes" element={<Vacantes />} />
