@@ -19,13 +19,19 @@ const HeroSection = () => {
   const prefersReduced = useReducedMotion();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
+
+  // Trigger fade-in on mount
+  useEffect(() => {
+    const timer = setTimeout(() => setFadeIn(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Lazy-load video: only set src after component mounts & not reduced motion
   useEffect(() => {
     const video = videoRef.current;
     if (!video || prefersReduced) return;
 
-    // Use IntersectionObserver to defer loading until visible
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -42,8 +48,6 @@ const HeroSection = () => {
 
   const handleVideoReady = () => setVideoLoaded(true);
 
-  const showVideo = !prefersReduced;
-
   return (
     <section className="relative h-screen min-h-[600px] max-h-[1200px] flex items-center overflow-hidden">
       {/* Static fallback image — always present as base layer */}
@@ -55,26 +59,34 @@ const HeroSection = () => {
         fetchPriority="high"
       />
 
-      {/* Video layer — hidden on mobile, hidden if prefers-reduced-motion */}
-      {showVideo && (
-        <video
-          ref={videoRef}
-          autoPlay
-          loop
-          muted
-          playsInline
-          onCanPlayThrough={handleVideoReady}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 hidden md:block ${
-            videoLoaded ? "opacity-100" : "opacity-0"
-          }`}
-        />
-      )}
+      {/* Video layer with subtle zoom animation */}
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        onCanPlayThrough={handleVideoReady}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+          videoLoaded ? "opacity-100" : "opacity-0"
+        } ${!prefersReduced ? "animate-hero-zoom" : ""}`}
+      />
 
-      {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
+      {/* Gradient overlay for text readability */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.65) 100%)",
+        }}
+      />
 
-      {/* Content */}
-      <div className="container relative z-10 flex flex-col items-center text-center px-4">
+      {/* Content with fade-in */}
+      <div
+        className={`container relative z-10 flex flex-col items-center text-center px-4 transition-opacity duration-[800ms] ease-out ${
+          fadeIn ? "opacity-100" : "opacity-0"
+        }`}
+      >
         <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight max-w-4xl tracking-tight">
           Protegemos la niñez.{" "}
           <span className="block mt-1 md:mt-2">Restituimos derechos. </span>
