@@ -23,7 +23,7 @@ const pillars = [
 
 const ImpactSection = () => {
   return (
-    <section className="py-20 md:py-28 bg-muted">
+    <section className="py-16 md:py-20 lg:min-h-screen lg:flex lg:items-center bg-muted">
       <div className="container px-4">
         <div className="text-center mb-14 md:mb-18">
           <span className="inline-block text-primary font-semibold text-sm uppercase tracking-widest mb-3">

@@ -146,7 +146,7 @@ const ImpactStatsSection = () => {
 
   return (
     <section
-      className="relative min-h-[60vh] flex items-center py-20 md:py-28 overflow-hidden"
+      className="relative min-h-[60vh] lg:min-h-screen flex items-center py-16 md:py-20 overflow-hidden"
       style={{
         background:
           "linear-gradient(160deg, hsl(var(--primary)) 0%, hsl(203 100% 25%) 60%, hsl(203 80% 18%) 100%)",

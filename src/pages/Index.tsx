@@ -92,8 +92,8 @@ const Index = () => {
       <CtaSection />
 
       {/* Partners Section */}
-      <section className="py-16 bg-card">
-        <div className="container">
+      <section className="py-16 lg:min-h-screen lg:flex lg:items-center bg-card">
+        <div className="container w-full">
           <div className="text-center mb-10">
             <span className="text-primary font-semibold text-sm uppercase tracking-wider">Alianzas</span>
             <h2 className="font-heading text-2xl md:text-3xl font-semibold text-foreground mt-2 mb-2">
