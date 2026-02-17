@@ -19,38 +19,60 @@ const secondaryStats: StatCard[] = [
   { number: "10", label: "Departamentos", micro: "comunidades protegidas en Guatemala" },
 ];
 
+const useReducedMotion = () => {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mql.matches);
+    const h = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mql.addEventListener("change", h);
+    return () => mql.removeEventListener("change", h);
+  }, []);
+  return reduced;
+};
+
 /* ── Animated single stat ── */
 const AnimatedStat = ({
   stat,
   isHero = false,
   delay = 0,
+  reducedMotion = false,
 }: {
   stat: StatCard;
   isHero?: boolean;
   delay?: number;
+  reducedMotion?: boolean;
 }) => {
   const { number: endNumber, suffix, prefix } = parseStatNumber(stat.number);
   const { formattedCount, elementRef, isVisible } = useCountUp({
     end: endNumber,
-    duration: isHero ? 3000 : 2500,
+    duration: isHero ? 1500 : 900,
     suffix,
     prefix,
   });
 
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(reducedMotion);
 
   useEffect(() => {
-    if (!isVisible) return;
+    if (reducedMotion || !isVisible) return;
     const t = setTimeout(() => setShow(true), delay);
     return () => clearTimeout(t);
-  }, [isVisible, delay]);
+  }, [isVisible, delay, reducedMotion]);
 
   return (
     <div
       ref={elementRef}
-      className={`text-center transition-all duration-700 ease-out ${
-        show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}
+      className={`text-center rounded-2xl p-6 transition-all duration-700 ease-out
+        ${show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}
+        ${!isHero ? "md:hover:-translate-y-1 md:hover:shadow-[0_8px_30px_rgba(0,0,0,0.25)]" : ""}
+      `}
+      style={
+        isHero && show && !reducedMotion
+          ? {
+              animation: "hero-scale-in 0.6s ease-out both",
+            }
+          : undefined
+      }
     >
       <div
         className={`font-heading font-extrabold leading-none tracking-tight ${
@@ -68,8 +90,8 @@ const AnimatedStat = ({
                 backgroundClip: "text",
               }
             : {
-                color: "#FFFFFF",
-                textShadow: "0 2px 12px rgba(0,0,0,0.3)",
+                color: "rgba(255,255,255,0.95)",
+                textShadow: "0 2px 16px rgba(0,0,0,0.35)",
               }
         }
       >
@@ -89,8 +111,8 @@ const AnimatedStat = ({
       <p
         className={`mt-1 italic ${
           isHero
-            ? "text-sm md:text-base text-white/60"
-            : "text-xs md:text-sm text-white/70"
+            ? "text-sm md:text-base text-white/65"
+            : "text-xs md:text-sm text-white/75"
         }`}
       >
         {stat.micro}
@@ -101,11 +123,29 @@ const AnimatedStat = ({
 
 /* ── Section ── */
 const ImpactStatsSection = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  const [headerVisible, setHeaderVisible] = useState(reducedMotion);
+  const headerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+    const el = headerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHeaderVisible(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.2 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [reducedMotion]);
 
   return (
     <section
-      ref={sectionRef}
       className="relative min-h-[60vh] flex items-center py-20 md:py-28 overflow-hidden"
       style={{
         background:
@@ -132,7 +172,12 @@ const ImpactStatsSection = () => {
 
       <div className="container relative z-10 px-4">
         {/* Section header */}
-        <div className="text-center mb-12 md:mb-16">
+        <div
+          ref={headerRef}
+          className={`text-center mb-12 md:mb-16 transition-all duration-700 ease-out ${
+            headerVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+          }`}
+        >
           <span className="inline-block text-accent font-semibold text-xs sm:text-sm uppercase tracking-[0.2em] mb-3">
             Impacto y Resultados
           </span>
@@ -143,7 +188,7 @@ const ImpactStatsSection = () => {
 
         {/* Hero stat */}
         <div className="mb-16 md:mb-20">
-          <AnimatedStat stat={heroStat} isHero delay={0} />
+          <AnimatedStat stat={heroStat} isHero delay={100} reducedMotion={reducedMotion} />
         </div>
 
         {/* Divider */}
@@ -154,10 +199,23 @@ const ImpactStatsSection = () => {
         {/* Secondary stats grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 md:gap-16 max-w-4xl mx-auto">
           {secondaryStats.map((stat, i) => (
-            <AnimatedStat key={stat.label} stat={stat} delay={200 + i * 150} />
+            <AnimatedStat
+              key={stat.label}
+              stat={stat}
+              delay={300 + i * 130}
+              reducedMotion={reducedMotion}
+            />
           ))}
         </div>
       </div>
+
+      {/* Hero scale-in keyframe (CSS-in-JS alternative) */}
+      <style>{`
+        @keyframes hero-scale-in {
+          from { transform: scale(0.96); }
+          to   { transform: scale(1); }
+        }
+      `}</style>
     </section>
   );
 };
