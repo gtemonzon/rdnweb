@@ -106,13 +106,9 @@ const Donar = () => {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      const { data } = await supabase
-        .from("donation_settings")
-        .select("min_amount, suggested_amounts, min_amount_usd, suggested_amounts_usd")
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        const d = data as any;
+      const { data } = await supabase.rpc("get_public_donation_settings");
+      if (data && data.length > 0) {
+        const d = data[0] as any;
         if (d.min_amount > 0) setMinAmountGTQ(d.min_amount);
         if (d.min_amount_usd > 0) setMinAmountUSD(d.min_amount_usd);
         if (Array.isArray(d.suggested_amounts) && d.suggested_amounts.length > 0) {
