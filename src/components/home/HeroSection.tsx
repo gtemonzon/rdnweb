@@ -1,40 +1,89 @@
 import { Link } from "react-router-dom";
 import { Heart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
+
+const useReducedMotion = () => {
+  const [prefersReduced, setPrefersReduced] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReduced(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReduced(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return prefersReduced;
+};
 
 const HeroSection = () => {
+  const prefersReduced = useReducedMotion();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+
+  // Lazy-load video: only set src after component mounts & not reduced motion
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || prefersReduced) return;
+
+    // Use IntersectionObserver to defer loading until visible
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          video.src = "/videos/hero-bg.mp4";
+          video.load();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(video);
+    return () => observer.disconnect();
+  }, [prefersReduced]);
+
+  const handleVideoReady = () => setVideoLoaded(true);
+
+  const showVideo = !prefersReduced;
+
   return (
     <section className="relative h-screen min-h-[600px] max-h-[1200px] flex items-center overflow-hidden">
-      {/* Video background */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        poster="/images/hero-kids.gif"
-        className="absolute inset-0 w-full h-full object-cover scale-105"
-      >
-        <source src="/videos/hero-bg.mp4" type="video/mp4" />
-      </video>
+      {/* Static fallback image — always present as base layer */}
+      <img
+        src="/images/hero-fallback.webp"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full object-cover"
+        fetchPriority="high"
+      />
 
-      {/* Gradient overlay for readability */}
+      {/* Video layer — hidden on mobile, hidden if prefers-reduced-motion */}
+      {showVideo && (
+        <video
+          ref={videoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          onCanPlayThrough={handleVideoReady}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 hidden md:block ${
+            videoLoaded ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      )}
+
+      {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
 
       {/* Content */}
       <div className="container relative z-10 flex flex-col items-center text-center px-4">
         <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white leading-tight max-w-4xl tracking-tight">
           Protegemos la niñez.{" "}
-          <span className="block mt-1 md:mt-2">
-            Restituimos derechos.{" "}
-          </span>
-          <span className="block mt-1 md:mt-2 text-accent">
-            Transformamos vidas.
-          </span>
+          <span className="block mt-1 md:mt-2">Restituimos derechos. </span>
+          <span className="block mt-1 md:mt-2 text-accent">Transformamos vidas.</span>
         </h1>
 
         <p className="mt-6 md:mt-8 text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed font-body">
-          Una organización guatemalteca comprometida con la protección de niños,
-          niñas y adolescentes víctimas de violencia.
+          Una organización guatemalteca comprometida con la protección de niños, niñas y adolescentes víctimas de
+          violencia.
         </p>
 
         <div className="mt-10 md:mt-12 flex flex-col sm:flex-row gap-4">
@@ -62,12 +111,14 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce">
-        <div className="w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center p-1.5">
-          <div className="w-1.5 h-2.5 bg-white/60 rounded-full animate-pulse" />
+      {/* Scroll indicator — respects reduced motion */}
+      {!prefersReduced && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce">
+          <div className="w-6 h-10 rounded-full border-2 border-white/40 flex items-start justify-center p-1.5">
+            <div className="w-1.5 h-2.5 bg-white/60 rounded-full animate-pulse" />
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 };
