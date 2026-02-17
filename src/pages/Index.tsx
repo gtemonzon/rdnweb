@@ -1,6 +1,3 @@
-import { Link } from "react-router-dom";
-import { Heart, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +6,7 @@ import HeroSection from "@/components/home/HeroSection";
 import ImpactSection from "@/components/home/ImpactSection";
 import ImpactStatsSection from "@/components/home/ImpactStatsSection";
 import MissionVisionSection from "@/components/home/MissionVisionSection";
+import CtaSection from "@/components/home/CtaSection";
 import misionImage from "@/assets/mision-refugio.png";
 import visionImageAsset from "@/assets/vision-refugio.png";
 
@@ -91,50 +89,7 @@ const Index = () => {
       />
 
       {/* CTA Section */}
-      <section className="relative py-24 overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1469406396016-013bfae5d83e?w=1200&q=80&fm=webp"
-            alt="Esperanza"
-            className="w-full h-full object-cover"
-            loading="lazy"
-            width={1200}
-            height={800}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-secondary/95 via-secondary/85 to-secondary/75" />
-        </div>
-        <div className="container relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-secondary-foreground">
-              Tu apoyo transforma vidas
-            </h2>
-            <p className="text-lg md:text-xl mb-10 text-secondary-foreground/90 max-w-2xl mx-auto">
-              Cada donación nos permite continuar protegiendo a niños, niñas y adolescentes que más lo necesitan. Únete
-              a nuestra causa.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg text-lg px-8"
-                asChild
-              >
-                <Link to="/donar">
-                  <Heart className="w-5 h-5 mr-2" />
-                  Hacer una Donación
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-white/10 border-white text-white hover:bg-white/20 backdrop-blur-sm"
-                asChild
-              >
-                <Link to="/contacto">Contáctanos</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <CtaSection />
 
       {/* Partners Section */}
       <section className="py-16 bg-card">
