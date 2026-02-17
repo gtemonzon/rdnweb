@@ -36,25 +36,25 @@ const MissionVisionBlock = ({
   return (
     <section
       ref={ref}
-      className="relative bg-fixed bg-cover bg-center"
+      className="relative bg-fixed bg-cover bg-center min-h-screen flex items-center"
       style={{ backgroundImage: `url(${imageUrl})` }}
     >
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/55 to-black/65" />
+      {/* Dark gradient overlay – lighter top, darker bottom */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-black/65" />
 
       <div
-        className={`container relative z-10 py-24 md:py-32 lg:py-40 transition-all duration-700 ease-out ${
-          visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+        className={`container relative z-10 pt-24 pb-16 md:pt-28 md:pb-20 lg:pt-32 lg:pb-24 transition-opacity duration-700 ease-out ${
+          visible ? "opacity-100" : "opacity-0"
         }`}
       >
-        <div className={`max-w-3xl ${align === "right" ? "ml-auto text-right" : ""}`}>
-          <span className="inline-block text-accent font-semibold text-xs sm:text-sm uppercase tracking-[0.2em] mb-3">
+        <div className={`max-w-4xl ${align === "right" ? "ml-auto text-right" : ""}`}>
+          <span className="inline-block text-accent font-semibold text-xs sm:text-sm uppercase tracking-[0.2em] mb-4">
             {label}
           </span>
-          <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold text-white mt-1 mb-8 leading-tight">
+          <h2 className="font-heading text-3xl md:text-5xl lg:text-6xl font-bold text-white mt-1 mb-10 leading-tight">
             {title}
           </h2>
-          <p className="text-base md:text-lg text-white/90 leading-[1.9] font-body">
+          <p className="text-base md:text-lg lg:text-xl text-white/90 leading-[1.9] font-body">
             {fullText}
           </p>
         </div>
