@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,6 +103,8 @@ const AdminTransparencia = () => {
   const [registros, setRegistros] = useState<RegistroCertificacion[]>([]);
   const [registrosSaving, setRegistrosSaving] = useState(false);
   const [uploadingPdfIdx, setUploadingPdfIdx] = useState<number | null>(null);
+  // Guard so fetchData never overwrites unsaved local edits after the first load.
+  const registrosLoadedRef = useRef(false);
 
   // Filters
   const [filterNumeral, setFilterNumeral] = useState<string>("all");
@@ -152,29 +154,33 @@ const AdminTransparencia = () => {
       toast({ title: "Error", description: "No se pudieron guardar los registros", variant: "destructive" });
     } else {
       toast({ title: "Guardado", description: "Registros y certificaciones actualizados" });
+      // After a successful save the ref can stay true; state is already in sync.
     }
     setRegistrosSaving(false);
   };
 
   const fetchData = async () => {
-    // Fetch registros y certificaciones
-    const { data: registrosData } = await supabase
-      .from("site_content")
-      .select("content")
-      .eq("section_key", "registros_certificaciones")
-      .maybeSingle();
+    // Only populate registros on the very first load; never overwrite
+    // unsaved local edits caused by re-renders or tab-switching.
+    if (!registrosLoadedRef.current) {
+      const { data: registrosData } = await supabase
+        .from("site_content")
+        .select("content")
+        .eq("section_key", "registros_certificaciones")
+        .maybeSingle();
 
-    if (registrosData?.content && Array.isArray(registrosData.content)) {
-      setRegistros(registrosData.content as unknown as RegistroCertificacion[]);
-    } else {
-      setRegistros([
-        { label: "Registro de ONG", url: "", pdf_url: "", link_type: "url", is_active: true },
-        { label: "Certificación SAT", url: "", pdf_url: "", link_type: "url", is_active: true },
-        { label: "Código de Ética", url: "", pdf_url: "", link_type: "url", is_active: true },
-        { label: "Política Anticorrupción", url: "", pdf_url: "", link_type: "url", is_active: true },
-      ]);
+      if (registrosData?.content && Array.isArray(registrosData.content)) {
+        setRegistros(registrosData.content as unknown as RegistroCertificacion[]);
+      } else {
+        setRegistros([
+          { label: "Registro de ONG", url: "", pdf_url: "", link_type: "url", is_active: true },
+          { label: "Certificación SAT", url: "", pdf_url: "", link_type: "url", is_active: true },
+          { label: "Código de Ética", url: "", pdf_url: "", link_type: "url", is_active: true },
+          { label: "Política Anticorrupción", url: "", pdf_url: "", link_type: "url", is_active: true },
+        ]);
+      }
+      registrosLoadedRef.current = true;
     }
-    setLoadingData(true);
 
     // Fetch numerals
     const { data: numeralsData, error: numeralsError } = await supabase
