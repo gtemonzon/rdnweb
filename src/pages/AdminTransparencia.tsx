@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { 
   ArrowLeft, Plus, Edit, Trash2, Eye, EyeOff, Upload, FileText, 
-  Download, Search, Filter, ChevronDown 
+  Download, Search, Filter, ChevronDown, Link as LinkIcon, GripVertical, Save, X
 } from "lucide-react";
 import {
   Table,
@@ -53,6 +53,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+interface RegistroCertificacion {
+  label: string;
+  url: string;
+  is_active: boolean;
+}
+
 interface Numeral {
   id: number;
   title: string;
@@ -91,6 +97,10 @@ const AdminTransparencia = () => {
   const [documents, setDocuments] = useState<TransparencyDocument[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   
+  // Registros y Certificaciones state
+  const [registros, setRegistros] = useState<RegistroCertificacion[]>([]);
+  const [registrosSaving, setRegistrosSaving] = useState(false);
+
   // Filters
   const [filterNumeral, setFilterNumeral] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<string>("all");
@@ -127,7 +137,40 @@ const AdminTransparencia = () => {
     }
   }, [user, canView]);
 
+  const saveRegistros = async (items: RegistroCertificacion[]) => {
+    setRegistrosSaving(true);
+    const { error } = await supabase
+      .from("site_content")
+      .upsert(
+        [{ section_key: "registros_certificaciones", title: "Registros y Certificaciones", content: JSON.parse(JSON.stringify(items)) }],
+        { onConflict: "section_key" }
+      );
+    if (error) {
+      toast({ title: "Error", description: "No se pudieron guardar los registros", variant: "destructive" });
+    } else {
+      toast({ title: "Guardado", description: "Registros y certificaciones actualizados" });
+    }
+    setRegistrosSaving(false);
+  };
+
   const fetchData = async () => {
+    // Fetch registros y certificaciones
+    const { data: registrosData } = await supabase
+      .from("site_content")
+      .select("content")
+      .eq("section_key", "registros_certificaciones")
+      .maybeSingle();
+
+    if (registrosData?.content && Array.isArray(registrosData.content)) {
+      setRegistros(registrosData.content as unknown as RegistroCertificacion[]);
+    } else {
+      setRegistros([
+        { label: "Registro de ONG", url: "", is_active: true },
+        { label: "Certificación SAT", url: "", is_active: true },
+        { label: "Código de Ética", url: "", is_active: true },
+        { label: "Política Anticorrupción", url: "", is_active: true },
+      ]);
+    }
     setLoadingData(true);
 
     // Fetch numerals
@@ -858,8 +901,99 @@ const AdminTransparencia = () => {
               </div>
             </div>
           </div>
-      </div>
-    </AdminLayout>
+
+          {/* ── Registros y Certificaciones editor ── */}
+          <div className="mt-10 p-6 bg-card rounded-xl shadow-sm border border-border">
+            <div className="flex items-center gap-3 mb-6">
+              <LinkIcon className="w-5 h-5 text-primary" />
+              <div>
+                <h2 className="font-heading text-lg font-bold text-foreground">
+                  Registros y Certificaciones
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Gestiona los enlaces que aparecen en la sección "Registros y Certificaciones" de la página pública.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {registros.map((reg, idx) => (
+                <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+                  <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1 grid sm:grid-cols-2 gap-2">
+                    <Input
+                      placeholder="Nombre (ej: Registro de ONG)"
+                      value={reg.label}
+                      onChange={(e) => {
+                        const updated = [...registros];
+                        updated[idx] = { ...updated[idx], label: e.target.value };
+                        setRegistros(updated);
+                      }}
+                    />
+                    <Input
+                      placeholder="URL (ej: https://...)"
+                      value={reg.url}
+                      onChange={(e) => {
+                        const updated = [...registros];
+                        updated[idx] = { ...updated[idx], url: e.target.value };
+                        setRegistros(updated);
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    title={reg.is_active ? "Ocultar" : "Mostrar"}
+                    onClick={() => {
+                      const updated = [...registros];
+                      updated[idx] = { ...updated[idx], is_active: !updated[idx].is_active };
+                      setRegistros(updated);
+                    }}
+                  >
+                    {reg.is_active ? (
+                      <Eye className="w-4 h-4 text-primary" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    title="Eliminar"
+                    onClick={() => setRegistros(registros.filter((_, i) => i !== idx))}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setRegistros([...registros, { label: "", url: "", is_active: true }])}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Agregar enlace
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={registrosSaving}
+                onClick={() => saveRegistros(registros)}
+              >
+                <Save className="w-4 h-4 mr-1" />
+                {registrosSaving ? "Guardando..." : "Guardar cambios"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </AdminLayout>
   );
 };
 

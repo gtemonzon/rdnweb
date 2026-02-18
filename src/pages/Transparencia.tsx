@@ -30,11 +30,26 @@ interface TransparencyDocument {
   created_at: string;
 }
 
+interface RegistroCertificacion {
+  label: string;
+  url: string;
+  is_active: boolean;
+}
+
+// Fallback defaults shown if DB has no data yet
+const DEFAULT_REGISTROS: RegistroCertificacion[] = [
+  { label: "Registro de ONG", url: "", is_active: true },
+  { label: "Certificación SAT", url: "", is_active: true },
+  { label: "Código de Ética", url: "", is_active: true },
+  { label: "Política Anticorrupción", url: "", is_active: true },
+];
+
 const Transparencia = () => {
   const [numerals, setNumerals] = useState<Numeral[]>([]);
   const [documents, setDocuments] = useState<TransparencyDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<string>("all");
+  const [registros, setRegistros] = useState<RegistroCertificacion[]>(DEFAULT_REGISTROS);
 
   const getProxyUrl = (fileUrl: string) => {
     const base = import.meta.env.VITE_SUPABASE_URL;
@@ -47,6 +62,17 @@ const Transparencia = () => {
   }, []);
 
   const fetchData = async () => {
+    // Fetch registros y certificaciones from site_content
+    const { data: registrosData } = await supabase
+      .from("site_content")
+      .select("content")
+      .eq("section_key", "registros_certificaciones")
+      .maybeSingle();
+
+    if (registrosData?.content && Array.isArray(registrosData.content)) {
+      setRegistros(registrosData.content as unknown as RegistroCertificacion[]);
+    }
+
     // Fetch active numerals
     const { data: numeralsData } = await supabase
       .from("transparency_numerals")
@@ -71,15 +97,14 @@ const Transparencia = () => {
   const years = [...new Set(documents.map((d) => d.year))].sort((a, b) => b - a);
 
   // Filter documents by year
-  const filteredDocuments = selectedYear === "all" 
-    ? documents 
+  const filteredDocuments = selectedYear === "all"
+    ? documents
     : documents.filter((d) => d.year.toString() === selectedYear);
 
   // Group documents by numeral, then by year
   const groupedByNumeral = numerals.reduce((acc, numeral) => {
     const numeralDocs = filteredDocuments.filter((d) => d.numeral_id === numeral.id);
     if (numeralDocs.length > 0) {
-      // Group by year within numeral
       const byYear = numeralDocs.reduce((yearAcc, doc) => {
         if (!yearAcc[doc.year]) yearAcc[doc.year] = [];
         yearAcc[doc.year].push(doc);
@@ -92,6 +117,9 @@ const Transparencia = () => {
 
   const hasDocuments = Object.keys(groupedByNumeral).length > 0;
 
+  // Only show active registros
+  const activeRegistros = registros.filter((r) => r.is_active);
+
   return (
     <Layout>
       {/* Hero */}
@@ -102,7 +130,7 @@ const Transparencia = () => {
               Transparencia
             </h1>
             <p className="text-lg text-muted-foreground">
-              Información Pública de Oficio conforme a la Ley de Acceso a la Información Pública (LAIP), 
+              Información Pública de Oficio conforme a la Ley de Acceso a la Información Pública (LAIP),
               Decreto 57-2008, Artículo 10.
             </p>
           </div>
@@ -117,8 +145,8 @@ const Transparencia = () => {
               Nuestro Compromiso con la Transparencia
             </h2>
             <p className="text-primary-foreground/90">
-              Como organización sin fines de lucro, mantenemos los más altos 
-              estándares de transparencia y rendición de cuentas. Toda la información 
+              Como organización sin fines de lucro, mantenemos los más altos
+              estándares de transparencia y rendición de cuentas. Toda la información
               aquí publicada cumple con las obligaciones establecidas en la LAIP.
             </p>
           </div>
@@ -130,17 +158,17 @@ const Transparencia = () => {
         <section className="py-8 bg-card border-b border-border">
           <div className="container">
             <div className="flex flex-wrap gap-2 justify-center">
-              <Button 
-                variant={selectedYear === "all" ? "default" : "outline"} 
+              <Button
+                variant={selectedYear === "all" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedYear("all")}
               >
                 Todos los años
               </Button>
               {years.map((year) => (
-                <Button 
-                  key={year} 
-                  variant={selectedYear === year.toString() ? "default" : "outline"} 
+                <Button
+                  key={year}
+                  variant={selectedYear === year.toString() ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedYear(year.toString())}
                 >
@@ -176,8 +204,8 @@ const Transparencia = () => {
                 {Object.entries(groupedByNumeral)
                   .sort(([a], [b]) => parseInt(a) - parseInt(b))
                   .map(([numeralId, { numeral, byYear }]) => (
-                    <AccordionItem 
-                      key={numeralId} 
+                    <AccordionItem
+                      key={numeralId}
                       value={numeralId}
                       className="bg-card rounded-xl border-none shadow-sm overflow-hidden"
                     >
@@ -256,11 +284,11 @@ const Transparencia = () => {
                     {numerals.map((n) => {
                       const hasDocs = groupedByNumeral[n.id];
                       return (
-                        <div 
+                        <div
                           key={n.id}
                           className={`p-3 rounded-lg text-sm ${
-                            hasDocs 
-                              ? "bg-primary/5 text-foreground" 
+                            hasDocs
+                              ? "bg-primary/5 text-foreground"
                               : "bg-muted/30 text-muted-foreground"
                           }`}
                         >
@@ -279,46 +307,43 @@ const Transparencia = () => {
         </div>
       </section>
 
-      {/* External Links */}
-      <section className="py-16 bg-card">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="font-heading text-2xl font-bold text-foreground mb-8">
-              Registros y Certificaciones
-            </h2>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <a
-                href="#"
-                className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors"
-              >
-                <span className="font-medium">Registro de ONG</span>
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
-              </a>
-              <a
-                href="#"
-                className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors"
-              >
-                <span className="font-medium">Certificación SAT</span>
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
-              </a>
-              <a
-                href="#"
-                className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors"
-              >
-                <span className="font-medium">Código de Ética</span>
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
-              </a>
-              <a
-                href="#"
-                className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors"
-              >
-                <span className="font-medium">Política Anticorrupción</span>
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
-              </a>
+      {/* Registros y Certificaciones — dynamic from DB */}
+      {activeRegistros.length > 0 && (
+        <section className="py-16 bg-card">
+          <div className="container">
+            <div className="max-w-3xl mx-auto text-center">
+              <h2 className="font-heading text-2xl font-bold text-foreground mb-8">
+                Registros y Certificaciones
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {activeRegistros.map((registro, idx) => (
+                  registro.url ? (
+                    <a
+                      key={idx}
+                      href={registro.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors"
+                    >
+                      <span className="font-medium text-left">{registro.label}</span>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </a>
+                  ) : (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30 opacity-60 cursor-not-allowed"
+                      title="Enlace próximamente disponible"
+                    >
+                      <span className="font-medium text-left text-muted-foreground">{registro.label}</span>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                    </div>
+                  )
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Contact for Information Requests */}
       <section className="py-16 bg-muted">
@@ -328,7 +353,7 @@ const Transparencia = () => {
               Solicitud de Información
             </h2>
             <p className="text-muted-foreground mb-6">
-              Si necesitas información adicional que no se encuentra publicada, 
+              Si necesitas información adicional que no se encuentra publicada,
               puedes realizar una solicitud formal conforme al Artículo 38 de la LAIP.
             </p>
             <Button asChild>
