@@ -204,7 +204,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           "bg-card border-r border-border flex-shrink-0 z-50 transition-all duration-300",
           isMobile
             ? cn("fixed inset-y-0 left-0 w-72", sidebarOpen ? "translate-x-0" : "-translate-x-full")
-            : cn(collapsed ? "w-16" : "w-64", "relative")
+            : cn(collapsed ? "w-16" : "w-64", "sticky top-0 h-screen")
         )}
       >
         {sidebarContent}
