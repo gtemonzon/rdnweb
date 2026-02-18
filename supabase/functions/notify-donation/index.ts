@@ -1,5 +1,12 @@
+/**
+ * notify-donation — Sends post-payment email notifications via M365 SMTP.
+ * Replaces Resend. Uses nodemailer with STARTTLS on port 587.
+ * Templates are configurable via donation_settings in the database.
+ */
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import nodemailer from "npm:nodemailer@6.9.13";
 
 const ALLOWED_ORIGINS = [
   "https://rdnweb.lovable.app",
@@ -46,72 +53,41 @@ interface DonationSettings {
   send_accounting_email: boolean;
 }
 
-/* ── Resend email sender ── */
-
-async function sendEmailViaResend(
-  apiKey: string,
-  from: string,
-  to: string,
-  subject: string,
-  html: string,
-): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from, to: [to], subject, html }),
-  });
-
-  if (!res.ok) {
-    const errBody = await res.text();
-    console.error("Resend API error:", res.status, errBody);
-    return { success: false, error: `Resend ${res.status}: ${errBody}` };
-  }
-
-  const data = await res.json();
-  console.log("Resend email sent, id:", data.id);
-  return { success: true };
-}
-
-/* ── Template helpers ── */
-
+// ── Template ───────────────────────────────────────────────────────────────
 function applyTemplate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
 function defaultAccountingHtml(vars: Record<string, string>): string {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #0067B1;">Donación confirmada por tarjeta</h2>
-      <p style="background: #d4edda; padding: 12px; border-radius: 8px; border-left: 4px solid #28a745;">
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <h2 style="color:#0067B1;">Donación confirmada por tarjeta</h2>
+      <p style="background:#d4edda;padding:12px;border-radius:8px;border-left:4px solid #28a745;">
         <strong>✅ Estado:</strong> Pago autorizado
       </p>
-      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #333;">Datos del donante</h3>
+      <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0;">
+        <h3 style="margin-top:0;color:#333;">Datos del donante</h3>
         <p><strong>Nombre:</strong> ${vars.donor_name}</p>
         <p><strong>Correo:</strong> ${vars.donor_email}</p>
       </div>
-      <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="margin-top: 0; color: #0067B1;">Detalles de la donación</h3>
-        <p><strong>Monto:</strong> <span style="font-size: 1.5em; color: #0067B1;">${vars.currency_symbol}${vars.amount}</span></p>
+      <div style="background:#e3f2fd;padding:20px;border-radius:8px;margin:20px 0;">
+        <h3 style="margin-top:0;color:#0067B1;">Detalles de la donación</h3>
+        <p><strong>Monto:</strong> <span style="font-size:1.5em;color:#0067B1;">${vars.currency_symbol}${vars.amount}</span></p>
         <p><strong>Método de pago:</strong> ${vars.card_info}</p>
         <p><strong>Fecha:</strong> ${vars.date}</p>
         <p><strong>Referencia:</strong> ${vars.reference}</p>
         ${vars.transaction_id ? `<p><strong>ID de transacción:</strong> ${vars.transaction_id}</p>` : ""}
       </div>
-    </div>
-  `;
+    </div>`;
 }
 
 function defaultDonorHtml(vars: Record<string, string>): string {
   return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #0067B1;">¡Gracias por tu donación!</h2>
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+      <h2 style="color:#0067B1;">¡Gracias por tu donación!</h2>
       <p>Hola ${vars.donor_name},</p>
       <p>Tu donación de <strong>${vars.currency_symbol}${vars.amount}</strong> ha sido procesada exitosamente.</p>
-      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <div style="background:#f5f5f5;padding:20px;border-radius:8px;margin:20px 0;">
         <p><strong>Monto:</strong> ${vars.currency_symbol}${vars.amount}</p>
         <p><strong>Fecha:</strong> ${vars.date}</p>
         <p><strong>Referencia:</strong> ${vars.reference}</p>
@@ -119,12 +95,54 @@ function defaultDonorHtml(vars: Record<string, string>): string {
       <p>Tu recibo deducible de impuestos será enviado a tu correo electrónico.</p>
       <p>Tu apoyo nos permite continuar protegiendo a niños, niñas y adolescentes que más lo necesitan.</p>
       <p>Atentamente,<br><strong>El Refugio de la Niñez</strong></p>
-    </div>
-  `;
+    </div>`;
 }
 
-/* ── Main handler ── */
+// ── SMTP sender ────────────────────────────────────────────────────────────
+async function sendViaSMTP(
+  to: string,
+  subject: string,
+  html: string,
+  fromName: string,
+): Promise<{ success: boolean; error?: string }> {
+  const host = Deno.env.get("SMTP_HOST");
+  const port = Deno.env.get("SMTP_PORT");
+  const user = Deno.env.get("SMTP_USERNAME");
+  const pass = Deno.env.get("SMTP_PASSWORD");
 
+  if (!host || !port || !user || !pass) {
+    return { success: false, error: "SMTP configuration incomplete" };
+  }
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port: parseInt(port, 10),
+    secure: false,
+    requireTLS: true,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: true },
+    connectionTimeout: 15_000,
+    greetingTimeout: 10_000,
+  });
+
+  try {
+    await transporter.sendMail({
+      from: `${fromName} <${user}>`,
+      to,
+      subject,
+      html,
+    });
+    transporter.close();
+    console.log("[notify-donation] SMTP email sent to:", to);
+    return { success: true };
+  } catch (err: any) {
+    transporter.close();
+    console.error("[notify-donation] SMTP error sending to", to, ":", err?.message, err?.code);
+    return { success: false, error: err?.message || "SMTP send failed" };
+  }
+}
+
+// ── Main handler ───────────────────────────────────────────────────────────
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
 
@@ -134,30 +152,19 @@ serve(async (req) => {
 
   try {
     const data: DonationNotification = await req.json();
-    console.log("notify-donation invoked, reference:", data.reference);
+    console.log("[notify-donation] Invoked, reference:", data.reference);
 
-    // --- Validate Resend API key ---
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      console.error("RESEND_API_KEY not configured");
-      return new Response(
-        JSON.stringify({ success: false, error: "Email service not configured (missing RESEND_API_KEY)" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // --- Load settings from database ---
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     let settings: DonationSettings | null = null;
 
     if (supabaseUrl && supabaseServiceKey) {
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const sb = createClient(supabaseUrl, supabaseServiceKey);
 
       // Idempotency check
       if (data.reference && !data.skip_idempotency) {
-        const { data: existing } = await supabase
+        const { data: existing } = await sb
           .from("donation_notification_log")
           .select("id")
           .eq("reference_number", data.reference)
@@ -165,46 +172,45 @@ serve(async (req) => {
           .maybeSingle();
 
         if (existing) {
-          console.log(`Already notified for ref ${data.reference}, skipping`);
+          console.log("[notify-donation] Already notified for ref:", data.reference);
           return new Response(
             JSON.stringify({ success: true, skipped: true, reason: "already_notified" }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
       }
 
-      const { data: settingsRow } = await supabase
+      const { data: settingsRow } = await sb
         .from("donation_settings")
         .select("*")
         .limit(1)
         .maybeSingle();
 
-      if (settingsRow) {
-        settings = settingsRow as unknown as DonationSettings;
-      }
+      if (settingsRow) settings = settingsRow as unknown as DonationSettings;
     }
 
+    // Default settings fallback
     if (!settings) {
       settings = {
         environment: "production",
         sender_email_name: "El Refugio de la Niñez",
         sender_email_address: null,
-        accounting_emails: ["donaciones@refugiodelaninez.org"],
-        accounting_email_subject: "💳 Donación confirmada: {{currency_symbol}}{{amount}} - Ref: {{reference}}",
+        accounting_emails: ["contabilidad@refugiodelaninez.org"],
+        accounting_email_subject: "💳 Donación confirmada: {{currency_symbol}}{{amount}} – Ref: {{reference}}",
         accounting_email_body: null,
         donor_email_enabled: true,
-        donor_email_subject: "Gracias por tu donación - El Refugio de la Niñez",
+        donor_email_subject: "Gracias por tu donación – El Refugio de la Niñez",
         donor_email_body: null,
         send_donor_email: true,
         send_accounting_email: true,
       };
     }
 
-    // Template variables
     const currencySymbol = data.currency === "USD" ? "US$" : "Q";
-    const cardInfo = data.card_type && data.card_last4
-      ? `${data.card_type} ****${data.card_last4}`
-      : "Tarjeta de crédito/débito";
+    const cardInfo =
+      data.card_type && data.card_last4
+        ? `${data.card_type} ****${data.card_last4}`
+        : "Tarjeta de crédito/débito";
 
     const templateVars: Record<string, string> = {
       donor_name: data.donor_name,
@@ -220,14 +226,10 @@ serve(async (req) => {
       date: data.date,
     };
 
-    // Sender: use settings or fallback to Resend's default
     const senderName = settings.sender_email_name || "El Refugio de la Niñez";
-    const senderEmail = settings.sender_email_address || "onboarding@resend.dev";
-    const fromAddress = `${senderName} <${senderEmail}>`;
-
     const errors: string[] = [];
 
-    // --- Send accounting notification ---
+    // ── Accounting notification ─────────────────────────────────────────────
     if (settings.send_accounting_email && settings.accounting_emails.length > 0) {
       const acctSubject = applyTemplate(settings.accounting_email_subject, templateVars);
       const acctHtml = settings.accounting_email_body
@@ -235,29 +237,27 @@ serve(async (req) => {
         : defaultAccountingHtml(templateVars);
 
       for (const email of settings.accounting_emails) {
-        console.log("Sending accounting email to:", email.trim());
-        const result = await sendEmailViaResend(resendApiKey, fromAddress, email.trim(), acctSubject, acctHtml);
+        const result = await sendViaSMTP(email.trim(), acctSubject, acctHtml, senderName);
         if (!result.success) errors.push(`accounting(${email}): ${result.error}`);
       }
     }
 
-    // --- Send donor thank-you ---
+    // ── Donor thank-you ─────────────────────────────────────────────────────
     if (settings.send_donor_email && settings.donor_email_enabled && data.donor_email) {
       const donorSubject = applyTemplate(settings.donor_email_subject, templateVars);
       const donorHtml = settings.donor_email_body
         ? applyTemplate(settings.donor_email_body, templateVars)
         : defaultDonorHtml(templateVars);
 
-      console.log("Sending donor email to:", data.donor_email);
-      const result = await sendEmailViaResend(resendApiKey, fromAddress, data.donor_email, donorSubject, donorHtml);
+      const result = await sendViaSMTP(data.donor_email, donorSubject, donorHtml, senderName);
       if (!result.success) errors.push(`donor: ${result.error}`);
     }
 
-    // --- Record in notification log ---
+    // ── Log notification ────────────────────────────────────────────────────
     if (supabaseUrl && supabaseServiceKey && data.reference) {
       try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        await supabase.from("donation_notification_log").insert({
+        const sb = createClient(supabaseUrl, supabaseServiceKey);
+        await sb.from("donation_notification_log").insert({
           reference_number: data.reference,
           transaction_id: data.transaction_id || null,
           notification_type: "payment",
@@ -265,46 +265,28 @@ serve(async (req) => {
           error_message: errors.length > 0 ? errors.join("; ") : null,
         });
       } catch (logErr) {
-        console.error("Failed to log notification (non-critical):", logErr);
+        console.error("[notify-donation] Failed to log (non-critical):", logErr);
       }
     }
 
     if (errors.length > 0) {
-      console.error("Some emails failed:", errors);
+      console.error("[notify-donation] Some emails failed:", errors);
       return new Response(
         JSON.stringify({ success: false, error: "Some emails failed", details: errors }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    console.log("notify-donation completed successfully for ref:", data.reference);
+    console.log("[notify-donation] Completed for ref:", data.reference);
     return new Response(
       JSON.stringify({ success: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
-  } catch (error: any) {
-    console.error("Error in notify-donation:", error?.message, error?.stack);
-
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL");
-      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-      if (supabaseUrl && supabaseServiceKey) {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-        const body = await req.clone().json().catch(() => ({}));
-        if (body.reference) {
-          await supabase.from("donation_notification_log").upsert({
-            reference_number: body.reference,
-            notification_type: "payment",
-            status: "failed",
-            error_message: error.message || "Unknown error",
-          }, { onConflict: "reference_number,notification_type" });
-        }
-      }
-    } catch (_) { /* ignore */ }
-
+  } catch (err: any) {
+    console.error("[notify-donation] Error:", err?.message, err?.stack);
     return new Response(
-      JSON.stringify({ success: false, error: error?.message || "Failed to send notification" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: err?.message || "Failed to send notification" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
