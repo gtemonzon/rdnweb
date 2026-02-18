@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { 
   ArrowLeft, Plus, Edit, Trash2, Eye, EyeOff, Upload, FileText, 
-  Download, Search, Filter, ChevronDown, Link as LinkIcon, GripVertical, Save, X
+  Download, Search, Filter, ChevronDown, ChevronUp, Link as LinkIcon, GripVertical, Save, X,
+  ChevronsUpDown,
 } from "lucide-react";
 import {
   Table,
@@ -111,6 +112,27 @@ const AdminTransparencia = () => {
   const [filterNumeral, setFilterNumeral] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Collapse/expand all numerals
+  const [openNumerals, setOpenNumerals] = useState<Set<string>>(new Set(["__all__"]));
+  const allExpanded = openNumerals.has("__all__");
+
+  const toggleNumeralOpen = (id: string) => {
+    setOpenNumerals(prev => {
+      const next = new Set(prev);
+      next.delete("__all__");
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllNumerals = () => {
+    if (allExpanded) {
+      setOpenNumerals(new Set());
+    } else {
+      setOpenNumerals(new Set(["__all__"]));
+    }
+  };
   
   // Form state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -552,7 +574,7 @@ const AdminTransparencia = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-4 mb-6">
+          <div className="flex flex-wrap gap-4 mb-6 items-center">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-muted-foreground" />
               <Select value={filterNumeral} onValueChange={setFilterNumeral}>
@@ -593,6 +615,17 @@ const AdminTransparencia = () => {
                 className="pl-9"
               />
             </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleAllNumerals}
+              className="ml-auto flex items-center gap-2"
+              title={allExpanded ? "Colapsar todos" : "Expandir todos"}
+            >
+              <ChevronsUpDown className="w-4 h-4" />
+              {allExpanded ? "Colapsar todo" : "Expandir todo"}
+            </Button>
           </div>
 
           {/* Documents table */}
@@ -614,9 +647,16 @@ const AdminTransparencia = () => {
               {Object.entries(groupedByNumeral)
                 .sort(([a], [b]) => parseInt(a) - parseInt(b))
                 .map(([numeralId, docs]) => (
-                  <Collapsible key={numeralId} defaultOpen>
+                  <Collapsible
+                    key={numeralId}
+                    open={allExpanded || openNumerals.has(numeralId)}
+                    onOpenChange={() => toggleNumeralOpen(numeralId)}
+                  >
                     <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 bg-card rounded-lg hover:bg-muted transition-colors">
-                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                      {(allExpanded || openNumerals.has(numeralId))
+                        ? <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                        : <ChevronDown className="w-5 h-5 text-muted-foreground -rotate-90" />
+                      }
                       <span className="font-medium">{getNumeralTitle(parseInt(numeralId))}</span>
                       <span className="ml-auto text-sm text-muted-foreground">
                         {docs.length} documento(s)
