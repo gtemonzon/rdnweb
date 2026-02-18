@@ -7,8 +7,8 @@ import ImpactSection from "@/components/home/ImpactSection";
 import ImpactStatsSection from "@/components/home/ImpactStatsSection";
 import MissionVisionSection from "@/components/home/MissionVisionSection";
 import CtaSection from "@/components/home/CtaSection";
-import misionImage from "@/assets/mision-refugio.png";
-import visionImageAsset from "@/assets/vision-refugio.png";
+import misionImage from "@/assets/mision-refugio.webp";
+import visionImageAsset from "@/assets/vision-refugio.webp";
 
 interface Partner {
   id: string;
