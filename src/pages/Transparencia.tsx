@@ -33,15 +33,17 @@ interface TransparencyDocument {
 interface RegistroCertificacion {
   label: string;
   url: string;
+  pdf_url: string;
+  link_type: "url" | "pdf";
   is_active: boolean;
 }
 
 // Fallback defaults shown if DB has no data yet
 const DEFAULT_REGISTROS: RegistroCertificacion[] = [
-  { label: "Registro de ONG", url: "", is_active: true },
-  { label: "Certificación SAT", url: "", is_active: true },
-  { label: "Código de Ética", url: "", is_active: true },
-  { label: "Política Anticorrupción", url: "", is_active: true },
+  { label: "Registro de ONG", url: "", pdf_url: "", link_type: "url", is_active: true },
+  { label: "Certificación SAT", url: "", pdf_url: "", link_type: "url", is_active: true },
+  { label: "Código de Ética", url: "", pdf_url: "", link_type: "url", is_active: true },
+  { label: "Política Anticorrupción", url: "", pdf_url: "", link_type: "url", is_active: true },
 ];
 
 const Transparencia = () => {
@@ -316,19 +318,27 @@ const Transparencia = () => {
                 Registros y Certificaciones
               </h2>
               <div className="grid sm:grid-cols-2 gap-4">
-                {activeRegistros.map((registro, idx) => (
-                  registro.url ? (
-                    <a
-                      key={idx}
-                      href={registro.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors"
-                    >
-                      <span className="font-medium text-left">{registro.label}</span>
-                      <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
-                    </a>
-                  ) : (
+                {activeRegistros.map((registro, idx) => {
+                  const href = registro.link_type === "pdf" ? registro.pdf_url : registro.url;
+                  if (href) {
+                    return (
+                      <a
+                        key={idx}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted transition-colors"
+                      >
+                        <span className="font-medium text-left">{registro.label}</span>
+                        {registro.link_type === "pdf" ? (
+                          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                        ) : (
+                          <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
+                        )}
+                      </a>
+                    );
+                  }
+                  return (
                     <div
                       key={idx}
                       className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/30 opacity-60 cursor-not-allowed"
@@ -337,8 +347,8 @@ const Transparencia = () => {
                       <span className="font-medium text-left text-muted-foreground">{registro.label}</span>
                       <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
                     </div>
-                  )
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -56,6 +56,8 @@ import {
 interface RegistroCertificacion {
   label: string;
   url: string;
+  pdf_url: string;
+  link_type: "url" | "pdf";
   is_active: boolean;
 }
 
@@ -100,6 +102,7 @@ const AdminTransparencia = () => {
   // Registros y Certificaciones state
   const [registros, setRegistros] = useState<RegistroCertificacion[]>([]);
   const [registrosSaving, setRegistrosSaving] = useState(false);
+  const [uploadingPdfIdx, setUploadingPdfIdx] = useState<number | null>(null);
 
   // Filters
   const [filterNumeral, setFilterNumeral] = useState<string>("all");
@@ -165,10 +168,10 @@ const AdminTransparencia = () => {
       setRegistros(registrosData.content as unknown as RegistroCertificacion[]);
     } else {
       setRegistros([
-        { label: "Registro de ONG", url: "", is_active: true },
-        { label: "Certificación SAT", url: "", is_active: true },
-        { label: "Código de Ética", url: "", is_active: true },
-        { label: "Política Anticorrupción", url: "", is_active: true },
+        { label: "Registro de ONG", url: "", pdf_url: "", link_type: "url", is_active: true },
+        { label: "Certificación SAT", url: "", pdf_url: "", link_type: "url", is_active: true },
+        { label: "Código de Ética", url: "", pdf_url: "", link_type: "url", is_active: true },
+        { label: "Política Anticorrupción", url: "", pdf_url: "", link_type: "url", is_active: true },
       ]);
     }
     setLoadingData(true);
@@ -916,59 +919,167 @@ const AdminTransparencia = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
-              {registros.map((reg, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
-                  <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <div className="flex-1 grid sm:grid-cols-2 gap-2">
-                    <Input
-                      placeholder="Nombre (ej: Registro de ONG)"
-                      value={reg.label}
-                      onChange={(e) => {
-                        const updated = [...registros];
-                        updated[idx] = { ...updated[idx], label: e.target.value };
-                        setRegistros(updated);
-                      }}
-                    />
-                    <Input
-                      placeholder="URL (ej: https://...)"
-                      value={reg.url}
-                      onChange={(e) => {
-                        const updated = [...registros];
-                        updated[idx] = { ...updated[idx], url: e.target.value };
-                        setRegistros(updated);
-                      }}
-                    />
+            <div className="space-y-4">
+              {registros.map((reg, idx) => {
+                const updateReg = (patch: Partial<RegistroCertificacion>) => {
+                  const updated = [...registros];
+                  updated[idx] = { ...updated[idx], ...patch };
+                  setRegistros(updated);
+                };
+
+                const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.type !== "application/pdf") {
+                    toast({ title: "Error", description: "Solo se permiten archivos PDF", variant: "destructive" });
+                    return;
+                  }
+                  if (file.size > 10 * 1024 * 1024) {
+                    toast({ title: "Error", description: "El archivo no puede superar 10MB", variant: "destructive" });
+                    return;
+                  }
+                  setUploadingPdfIdx(idx);
+                  const fileName = `registros/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+                  const { data, error } = await supabase.storage.from("transparency-docs").upload(fileName, file);
+                  if (error) {
+                    toast({ title: "Error", description: "No se pudo subir el PDF", variant: "destructive" });
+                  } else {
+                    const { data: urlData } = supabase.storage.from("transparency-docs").getPublicUrl(data.path);
+                    updateReg({ pdf_url: urlData.publicUrl });
+                    toast({ title: "PDF subido", description: file.name });
+                  }
+                  setUploadingPdfIdx(null);
+                  e.target.value = "";
+                };
+
+                return (
+                  <div key={idx} className="rounded-lg bg-muted/40 border border-border p-4 space-y-3">
+                    {/* Label + controls row */}
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <Input
+                        className="flex-1"
+                        placeholder="Nombre (ej: Registro de ONG)"
+                        value={reg.label}
+                        onChange={(e) => updateReg({ label: e.target.value })}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        title={reg.is_active ? "Ocultar en página pública" : "Mostrar en página pública"}
+                        onClick={() => updateReg({ is_active: !reg.is_active })}
+                      >
+                        {reg.is_active ? (
+                          <Eye className="w-4 h-4 text-primary" />
+                        ) : (
+                          <EyeOff className="w-4 h-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setRegistros(registros.filter((_, i) => i !== idx))}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {/* Link type selector */}
+                    <div className="flex gap-2 ml-6">
+                      <button
+                        type="button"
+                        onClick={() => updateReg({ link_type: "url" })}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${
+                          reg.link_type === "url"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        }`}
+                      >
+                        <LinkIcon className="w-3.5 h-3.5" />
+                        URL externa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateReg({ link_type: "pdf" })}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors border ${
+                          reg.link_type === "pdf"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        }`}
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        Archivo PDF
+                      </button>
+                    </div>
+
+                    {/* Conditional input */}
+                    <div className="ml-6">
+                      {reg.link_type === "url" ? (
+                        <Input
+                          placeholder="https://..."
+                          value={reg.url}
+                          onChange={(e) => updateReg({ url: e.target.value })}
+                        />
+                      ) : (
+                        <div>
+                          {reg.pdf_url ? (
+                            <div className="flex items-center gap-2 p-3 bg-background rounded-lg border border-border">
+                              <FileText className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-sm flex-1 truncate text-foreground">
+                                {reg.pdf_url.split("/").pop()}
+                              </span>
+                              <a
+                                href={reg.pdf_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline shrink-0"
+                              >
+                                Ver
+                              </a>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-muted-foreground shrink-0"
+                                onClick={() => updateReg({ pdf_url: "" })}
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <label className={`flex flex-col items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                              uploadingPdfIdx === idx
+                                ? "border-primary/50 bg-primary/5"
+                                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
+                            }`}>
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                className="hidden"
+                                disabled={uploadingPdfIdx !== null}
+                                onChange={handlePdfUpload}
+                              />
+                              {uploadingPdfIdx === idx ? (
+                                <span className="text-sm text-muted-foreground">Subiendo PDF...</span>
+                              ) : (
+                                <>
+                                  <Upload className="w-5 h-5 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">
+                                    Arrastra o haz clic para subir un PDF (máx. 10MB)
+                                  </span>
+                                </>
+                              )}
+                            </label>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    title={reg.is_active ? "Ocultar" : "Mostrar"}
-                    onClick={() => {
-                      const updated = [...registros];
-                      updated[idx] = { ...updated[idx], is_active: !updated[idx].is_active };
-                      setRegistros(updated);
-                    }}
-                  >
-                    {reg.is_active ? (
-                      <Eye className="w-4 h-4 text-primary" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    title="Eliminar"
-                    onClick={() => setRegistros(registros.filter((_, i) => i !== idx))}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex gap-3 mt-4">
@@ -976,7 +1087,7 @@ const AdminTransparencia = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setRegistros([...registros, { label: "", url: "", is_active: true }])}
+                onClick={() => setRegistros([...registros, { label: "", url: "", pdf_url: "", link_type: "url", is_active: true }])}
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Agregar enlace
