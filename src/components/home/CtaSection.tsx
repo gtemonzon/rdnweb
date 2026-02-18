@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
-import ctaBg from "@/assets/cta-kids.png";
+import ctaBg from "@/assets/cta-kids.webp";
 
 const CtaSection = () => {
   const ref = useRef<HTMLDivElement>(null);
