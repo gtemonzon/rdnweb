@@ -884,7 +884,7 @@ const Donar = () => {
               <div className="rounded-xl border border-border p-5 text-center">
                 <Shield className="w-6 h-6 mx-auto mb-2 text-primary" />
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Somos una organización transparente y auditada. El 85% de cada donación va directamente a programas de protección.
+                  Somos una organización transparente y auditada. El 90% de cada donación va directamente a programas de protección.
                 </p>
                 <a href="/transparencia" className="text-xs text-primary font-medium hover:underline mt-2 inline-block">
                   Ver Transparencia →
