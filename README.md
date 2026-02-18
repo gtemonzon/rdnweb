@@ -1,73 +1,48 @@
-# Welcome to your Lovable project
+# El Refugio de la Niñez – Web
 
-## Project info
+## Environment Variables
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+**Local development** – copy `.env.example` to `.env` and fill in your values:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+cp .env.example .env
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+**Production (Lovable Cloud)** – environment variables are automatically injected.
+For external deployments (e.g. Vercel), configure all `VITE_` variables in
+*Project Settings → Environment Variables*. **Never commit `.env` to the repo.**
 
-# Step 3: Install the necessary dependencies.
-npm i
+Variables needed are documented in `.env.example`.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+---
+
+## Security & Performance Checklist
+
+- ✅ `.env` is git-ignored (auto-managed by Lovable Cloud)
+- ✅ `.env.example` exists with placeholder values
+- ✅ Admin uploads generate optimized WebP variants (large 2000px + thumb 600px) via Canvas API
+- ✅ Frontend uses `loading="lazy"` and `decoding="async"` on non-critical images
+- ✅ Hero fallback image is WebP (`/public/images/hero-fallback.webp`)
+- ✅ Static assets (logo, CTA, mission, vision) converted to WebP in `src/assets/`
+
+---
+
+## Tech Stack
+
+- Vite + React + TypeScript
+- Tailwind CSS + shadcn/ui
+- Lovable Cloud (Supabase) – database, auth, storage, edge functions
+
+## How to run locally
+
+```sh
+npm install
+cp .env.example .env   # fill in your values
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Deployment
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Open [Lovable](https://lovable.dev) and click Share → Publish.
+For a custom domain: Project → Settings → Domains → Connect Domain.
+See [docs](https://docs.lovable.dev/features/custom-domain).

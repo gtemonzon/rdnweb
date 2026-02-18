@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      assets: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          folder: string | null
+          height: number | null
+          id: string
+          large_url: string
+          mime_type: string | null
+          original_size_bytes: number | null
+          original_url: string | null
+          size_bytes: number | null
+          thumb_url: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          folder?: string | null
+          height?: number | null
+          id?: string
+          large_url: string
+          mime_type?: string | null
+          original_size_bytes?: number | null
+          original_url?: string | null
+          size_bytes?: number | null
+          thumb_url: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          folder?: string | null
+          height?: number | null
+          id?: string
+          large_url?: string
+          mime_type?: string | null
+          original_size_bytes?: number | null
+          original_url?: string | null
+          size_bytes?: number | null
+          thumb_url?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
       blog_permissions: {
         Row: {
           allowed_categories: string[] | null
