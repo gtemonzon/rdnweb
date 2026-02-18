@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/logo.png";
+// Brand logo: always use the lossless PNG from /brand/. Do NOT run through lossy photo optimization.
+const BRAND_LOGO = "/brand/logo.png";
 import {
   FileText,
   Scale,
@@ -123,7 +124,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       {/* Logo */}
       <div className="p-4 border-b border-border flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <img src={logo} alt="El Refugio de la Niñez" className={cn("h-10 w-auto", collapsed && !isMobile && "h-8")} />
+          <img src={BRAND_LOGO} alt="El Refugio de la Niñez" className={cn("h-10 w-auto", collapsed && !isMobile && "h-8")} />
         </Link>
         {isMobile && (
           <button onClick={() => setSidebarOpen(false)} className="p-1 text-muted-foreground hover:text-foreground">
@@ -227,7 +228,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             <button onClick={() => setSidebarOpen(true)} className="p-1 text-foreground">
               <Menu className="w-5 h-5" />
             </button>
-            <img src={logo} alt="El Refugio de la Niñez" className="h-8 w-auto" />
+            <img src={BRAND_LOGO} alt="El Refugio de la Niñez" className="h-8 w-auto" />
           </header>
         )}
 

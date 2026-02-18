@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/logo.webp";
+// Brand logo: always use the lossless PNG from /brand/. Do NOT run through lossy photo optimization.
+// SVG is preferred if available (public/brand/logo.svg). Never swap this for a CMS/admin-uploaded image.
+const BRAND_LOGO = "/brand/logo.png";
 
 const navLinks = [
   { name: "Inicio", href: "/" },
@@ -23,7 +25,7 @@ const Header = () => {
       <div className="container flex h-20 items-center justify-between">
         <Link to="/" className="flex items-center">
           <img 
-            src={logo} 
+            src={BRAND_LOGO} 
             alt="El Refugio de la Niñez" 
             className="h-14 w-auto"
             width={190}
