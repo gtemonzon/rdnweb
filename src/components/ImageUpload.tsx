@@ -272,11 +272,11 @@ const ImageUpload = ({
           </div>
           {sizeInfo && (
             <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>
                 Original: <strong>{formatBytes(sizeInfo.original)}</strong> →
                 Optimizado: <strong>{formatBytes(sizeInfo.optimized)}</strong>{" "}
-                <span className="text-green-600">
+                <span className="text-accent">
                   ({Math.round((1 - sizeInfo.optimized / sizeInfo.original) * 100)}% menos)
                 </span>
               </span>
