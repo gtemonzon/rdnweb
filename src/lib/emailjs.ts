@@ -1,22 +1,12 @@
-import emailjs from "@emailjs/browser";
+/**
+ * emailjs.ts — DEPRECATED. EmailJS has been removed.
+ * All email sending now goes through server-side M365 SMTP edge functions.
+ * This file is kept as a stub to avoid import errors during migration cleanup.
+ *
+ * NOTE: Brand logos must be SVG or lossless; do not run through lossy photo optimization.
+ */
 
-// EmailJS configuration - these are public keys, safe to expose
-// To configure: Create account at emailjs.com, get these values from dashboard
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "";
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || "";
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "";
-
-// Check if EmailJS is configured
-export const isEmailJSConfigured = (): boolean => {
-  const configured = Boolean(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY);
-  console.log("EmailJS Config Check:", {
-    configured,
-    hasServiceId: Boolean(EMAILJS_SERVICE_ID),
-    hasTemplateId: Boolean(EMAILJS_TEMPLATE_ID),
-    hasPublicKey: Boolean(EMAILJS_PUBLIC_KEY),
-  });
-  return configured;
-};
+export const isEmailJSConfigured = (): boolean => false;
 
 export interface ContactEmailParams {
   from_name: string;
@@ -39,78 +29,12 @@ export interface DonationEmailParams {
   reply_to: string;
 }
 
-/**
- * Send contact form email using EmailJS
- */
-export const sendContactEmail = async (params: ContactEmailParams): Promise<void> => {
-  console.log("sendContactEmail called with:", params);
-  
-  if (!isEmailJSConfigured()) {
-    console.error("EmailJS not configured - throwing error");
-    throw new Error("EmailJS no está configurado. Contacta al administrador.");
-  }
-
-  const templateParams = {
-    from_name: params.from_name,
-    from_email: params.from_email,
-    phone: params.phone || "No proporcionado",
-    subject: params.subject,
-    message: params.message,
-    reply_to: params.reply_to,
-  };
-
-  console.log("Sending email with templateParams:", templateParams);
-
-  try {
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams,
-      EMAILJS_PUBLIC_KEY
-    );
-
-    console.log("EmailJS response:", response);
-
-    if (response.status !== 200) {
-      throw new Error("Error al enviar el correo");
-    }
-  } catch (error) {
-    console.error("EmailJS send error:", error);
-    throw error;
-  }
+/** @deprecated Use the send-email edge function instead */
+export const sendContactEmail = async (_params: ContactEmailParams): Promise<void> => {
+  console.warn("[emailjs] sendContactEmail is deprecated. Use send-email edge function.");
 };
 
-/**
- * Send donation notification email using EmailJS
- * Uses a separate template for donations
- */
-export const sendDonationEmail = async (params: DonationEmailParams): Promise<void> => {
-  const donationTemplateId = import.meta.env.VITE_EMAILJS_DONATION_TEMPLATE_ID || EMAILJS_TEMPLATE_ID;
-  
-  if (!isEmailJSConfigured()) {
-    throw new Error("EmailJS no está configurado. Contacta al administrador.");
-  }
-
-  const templateParams = {
-    from_name: params.from_name,
-    from_email: params.from_email,
-    phone: params.phone || "No proporcionado",
-    amount: params.amount,
-    currency: params.currency,
-    donation_type: params.donation_type === "mensual" ? "Mensual" : "Única",
-    payment_method: params.payment_method === "tarjeta" ? "Tarjeta" : "Transferencia bancaria",
-    nit: params.nit || "CF",
-    reply_to: params.reply_to,
-  };
-
-  const response = await emailjs.send(
-    EMAILJS_SERVICE_ID,
-    donationTemplateId,
-    templateParams,
-    EMAILJS_PUBLIC_KEY
-  );
-
-  if (response.status !== 200) {
-    throw new Error("Error al enviar el correo");
-  }
+/** @deprecated Use the send-email edge function instead */
+export const sendDonationEmail = async (_params: DonationEmailParams): Promise<void> => {
+  console.warn("[emailjs] sendDonationEmail is deprecated. Use send-email edge function.");
 };
