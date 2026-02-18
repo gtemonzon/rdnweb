@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import PdfDropZone from "@/components/PdfDropZone";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -118,7 +119,7 @@ const AdminVacantes = () => {
   });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  
 
   const canView = userRole === "admin" || hasPermission("vacancies", "can_view");
   const canCreate = userRole === "admin" || hasPermission("vacancies", "can_create");
@@ -159,78 +160,21 @@ const AdminVacantes = () => {
     setLoadingData(false);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await uploadFile(file);
-  };
-
-  const uploadFile = async (file: File) => {
-    if (file.type !== "application/pdf") {
-      toast({
-        title: "Error",
-        description: "Solo se permiten archivos PDF",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "Error",
-        description: "El archivo no puede superar 10MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const uploadVacancyPdf = async (file: File) => {
     setUploading(true);
-
     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const { data, error } = await supabase.storage
       .from("vacancies-docs")
       .upload(fileName, file);
-
     if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo subir el archivo",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo subir el archivo", variant: "destructive" });
       setUploading(false);
       return;
     }
-
-    const { data: urlData } = supabase.storage
-      .from("vacancies-docs")
-      .getPublicUrl(data.path);
-
-    setFormData({ ...formData, pdf_url: urlData.publicUrl });
+    const { data: urlData } = supabase.storage.from("vacancies-docs").getPublicUrl(data.path);
+    setFormData((prev) => ({ ...prev, pdf_url: urlData.publicUrl }));
     setUploading(false);
-
-    toast({
-      title: "Archivo subido",
-      description: "El PDF se ha subido correctamente",
-    });
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      uploadFile(file);
-    }
+    toast({ title: "Archivo subido", description: "El PDF se ha subido correctamente" });
   };
 
   const handleSubmit = async () => {
@@ -392,9 +336,9 @@ const AdminVacantes = () => {
       return <Badge variant="destructive">Vence pronto</Badge>;
     }
     if (days <= 7) {
-      return <Badge className="bg-amber-500">Próxima</Badge>;
+      return <Badge className="bg-warning text-warning-foreground">Próxima</Badge>;
     }
-    return <Badge className="bg-green-600">Activa</Badge>;
+    return <Badge className="bg-primary text-primary-foreground">Activa</Badge>;
   };
 
   if (loading) {
@@ -580,68 +524,13 @@ const AdminVacantes = () => {
 
                       <div className="space-y-2">
                         <Label>PDF con detalles de la plaza</Label>
-                        <div
-                          className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                            isDragging
-                              ? "border-accent bg-accent/5"
-                              : "border-border hover:border-accent/50"
-                          }`}
-                          onDragOver={handleDragOver}
-                          onDragLeave={handleDragLeave}
-                          onDrop={handleDrop}
-                        >
-                          {formData.pdf_url ? (
-                            <div className="flex items-center justify-center gap-4">
-                              <FileText className="w-8 h-8 text-accent" />
-                              <div className="text-left">
-                                <p className="text-sm font-medium">PDF cargado</p>
-                                <a
-                                  href={formData.pdf_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-accent hover:underline"
-                                >
-                                  Ver archivo
-                                </a>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  setFormData({ ...formData, pdf_url: "" })
-                                }
-                              >
-                                Cambiar
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                              <p className="text-sm text-muted-foreground mb-2">
-                                Arrastra un PDF aquí o haz clic para seleccionar
-                              </p>
-                              <input
-                                type="file"
-                                accept=".pdf"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                                id="pdf-upload"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                disabled={uploading}
-                                onClick={() =>
-                                  document.getElementById("pdf-upload")?.click()
-                                }
-                              >
-                                {uploading ? "Subiendo..." : "Seleccionar PDF"}
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                        <PdfDropZone
+                          value={formData.pdf_url}
+                          onFile={uploadVacancyPdf}
+                          onClear={() => setFormData((prev) => ({ ...prev, pdf_url: "" }))}
+                          isUploading={uploading}
+                          onError={(msg) => toast({ title: "Error", description: msg, variant: "destructive" })}
+                        />
                       </div>
                     </div>
 
