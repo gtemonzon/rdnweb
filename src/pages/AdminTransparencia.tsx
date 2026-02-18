@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import PdfDropZone from "@/components/PdfDropZone";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -123,7 +124,7 @@ const AdminTransparencia = () => {
   });
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  
 
   const canView = userRole === "admin" || hasPermission("transparency", "can_view");
   const canCreate = userRole === "admin" || hasPermission("transparency", "can_create");
@@ -232,105 +233,21 @@ const AdminTransparencia = () => {
     setLoadingData(false);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== "application/pdf") {
-      toast({
-        title: "Error",
-        description: "Solo se permiten archivos PDF",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "Error",
-        description: "El archivo no puede superar 10MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const uploadTransparencyPdf = async (file: File) => {
     setUploading(true);
-
     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const { data, error } = await supabase.storage
       .from("transparency-docs")
       .upload(fileName, file);
-
     if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo subir el archivo",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo subir el archivo", variant: "destructive" });
       setUploading(false);
       return;
     }
-
-    const { data: urlData } = supabase.storage
-      .from("transparency-docs")
-      .getPublicUrl(data.path);
-
-    setFormData({ ...formData, file_url: urlData.publicUrl });
+    const { data: urlData } = supabase.storage.from("transparency-docs").getPublicUrl(data.path);
+    setFormData((prev) => ({ ...prev, file_url: urlData.publicUrl }));
     setUploading(false);
-
-    toast({
-      title: "Archivo subido",
-      description: "El PDF se ha subido correctamente",
-    });
-  };
-
-  const handleFileDrop = async (file: File) => {
-    if (file.type !== "application/pdf") {
-      toast({
-        title: "Error",
-        description: "Solo se permiten archivos PDF",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "Error",
-        description: "El archivo no puede superar 10MB",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setUploading(true);
-
-    const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const { data, error } = await supabase.storage
-      .from("transparency-docs")
-      .upload(fileName, file);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo subir el archivo",
-        variant: "destructive",
-      });
-      setUploading(false);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("transparency-docs")
-      .getPublicUrl(data.path);
-
-    setFormData({ ...formData, file_url: urlData.publicUrl });
-    setUploading(false);
-
-    toast({
-      title: "Archivo subido",
-      description: "El PDF se ha subido correctamente",
-    });
+    toast({ title: "Archivo subido", description: "El PDF se ha subido correctamente" });
   };
 
   const handleSubmit = async () => {
@@ -610,72 +527,13 @@ const AdminTransparencia = () => {
 
                       <div className="space-y-2">
                         <Label>Archivo PDF *</Label>
-                        {formData.file_url ? (
-                          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                            <FileText className="w-5 h-5 text-primary" />
-                            <span className="text-sm flex-1 truncate">
-                              {formData.file_url.split("/").pop()}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setFormData({ ...formData, file_url: "" })}
-                            >
-                              Cambiar
-                            </Button>
-                          </div>
-                        ) : (
-                          <div 
-                            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                              isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50"
-                            }`}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDragging(true);
-                            }}
-                            onDragEnter={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDragging(true);
-                            }}
-                            onDragLeave={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDragging(false);
-                            }}
-                            onDrop={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDragging(false);
-                              const file = e.dataTransfer.files?.[0];
-                              if (file) {
-                                handleFileDrop(file);
-                              }
-                            }}
-                          >
-                            <input
-                              type="file"
-                              accept=".pdf"
-                              onChange={handleFileUpload}
-                              className="hidden"
-                              id="pdf-upload"
-                              disabled={uploading}
-                            />
-                            <label
-                              htmlFor="pdf-upload"
-                              className="cursor-pointer flex flex-col items-center gap-2"
-                            >
-                              <Upload className={`w-8 h-8 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
-                              <span className={`text-sm ${isDragging ? "text-primary font-medium" : "text-muted-foreground"}`}>
-                                {uploading ? "Subiendo..." : isDragging ? "Suelta el archivo aquí" : "Arrastra un PDF o haz clic para subir"}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                Máximo 10MB
-                              </span>
-                            </label>
-                          </div>
-                        )}
+                        <PdfDropZone
+                          value={formData.file_url}
+                          onFile={uploadTransparencyPdf}
+                          onClear={() => setFormData((prev) => ({ ...prev, file_url: "" }))}
+                          isUploading={uploading}
+                          onError={(msg) => toast({ title: "Error", description: msg, variant: "destructive" })}
+                        />
                       </div>
                     </div>
 
@@ -933,17 +791,7 @@ const AdminTransparencia = () => {
                   setRegistros(updated);
                 };
 
-                const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.type !== "application/pdf") {
-                    toast({ title: "Error", description: "Solo se permiten archivos PDF", variant: "destructive" });
-                    return;
-                  }
-                  if (file.size > 10 * 1024 * 1024) {
-                    toast({ title: "Error", description: "El archivo no puede superar 10MB", variant: "destructive" });
-                    return;
-                  }
+                const uploadRegistroPdf = async (file: File) => {
                   setUploadingPdfIdx(idx);
                   const fileName = `registros/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
                   const { data, error } = await supabase.storage.from("transparency-docs").upload(fileName, file);
@@ -955,7 +803,6 @@ const AdminTransparencia = () => {
                     toast({ title: "PDF subido", description: file.name });
                   }
                   setUploadingPdfIdx(null);
-                  e.target.value = "";
                 };
 
                 return (
@@ -1030,57 +877,13 @@ const AdminTransparencia = () => {
                           onChange={(e) => updateReg({ url: e.target.value })}
                         />
                       ) : (
-                        <div>
-                          {reg.pdf_url ? (
-                            <div className="flex items-center gap-2 p-3 bg-background rounded-lg border border-border">
-                              <FileText className="w-4 h-4 text-primary shrink-0" />
-                              <span className="text-sm flex-1 truncate text-foreground">
-                                {reg.pdf_url.split("/").pop()}
-                              </span>
-                              <a
-                                href={reg.pdf_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary hover:underline shrink-0"
-                              >
-                                Ver
-                              </a>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="text-muted-foreground shrink-0"
-                                onClick={() => updateReg({ pdf_url: "" })}
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <label className={`flex flex-col items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
-                              uploadingPdfIdx === idx
-                                ? "border-primary/50 bg-primary/5"
-                                : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
-                            }`}>
-                              <input
-                                type="file"
-                                accept=".pdf"
-                                className="hidden"
-                                disabled={uploadingPdfIdx !== null}
-                                onChange={handlePdfUpload}
-                              />
-                              {uploadingPdfIdx === idx ? (
-                                <span className="text-sm text-muted-foreground">Subiendo PDF...</span>
-                              ) : (
-                                <>
-                                  <Upload className="w-5 h-5 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">
-                                    Arrastra o haz clic para subir un PDF (máx. 10MB)
-                                  </span>
-                                </>
-                              )}
-                            </label>
-                          )}
-                        </div>
+                        <PdfDropZone
+                          value={reg.pdf_url}
+                          onFile={uploadRegistroPdf}
+                          onClear={() => updateReg({ pdf_url: "" })}
+                          isUploading={uploadingPdfIdx === idx}
+                          onError={(msg) => toast({ title: "Error", description: msg, variant: "destructive" })}
+                        />
                       )}
                     </div>
                   </div>
