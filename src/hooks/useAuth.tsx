@@ -180,26 +180,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    // THEN check for existing session — wrapped in try/catch so a SecurityError
+    // (storage blocked in incognito) is treated as "no session" instead of crashing.
+    try {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+
+        if (session?.user) {
+          try {
+            const { data } = await supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", session.user.id)
+              .maybeSingle();
+
+            const role = data?.role as UserRole || null;
+            setUserRole(role);
+            await fetchModulePermissions(session.user.id, role);
+          } catch {
+            // Non-critical: treat as no role
+          }
+        }
+      }).catch(() => {
+        // getSession rejected (e.g. SecurityError) — treat as no session
+        setLoading(false);
+      });
+    } catch {
       setLoading(false);
-      
-      if (session?.user) {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-        
-        const role = data?.role as UserRole || null;
-        setUserRole(role);
-        
-        // Fetch module permissions after role
-        await fetchModulePermissions(session.user.id, role);
-      }
-    });
+    }
 
     return () => subscription.unsubscribe();
   }, []);

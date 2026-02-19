@@ -8,10 +8,19 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Only detect session in URL when the URL actually contains auth callback params.
+// This avoids unnecessary storage access (and SecurityErrors) on plain page loads.
+const authCallbackParams = ["code", "access_token", "refresh_token", "type", "error"];
+const hasAuthParams = authCallbackParams.some((p) =>
+  new URLSearchParams(window.location.search).has(p) ||
+  new URLSearchParams(window.location.hash.replace(/^#/, "?")).has(p)
+);
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+    detectSessionInUrl: hasAuthParams,
+  },
 });
