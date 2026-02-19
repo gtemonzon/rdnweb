@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { sessionGet, sessionSet, localRemove } from "@/lib/safeStorage";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { XCircle, AlertTriangle, Home, Heart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -80,11 +81,11 @@ const PaymentReturn = () => {
     if (!details.amount || !details.reference) return;
 
     const emailKey = `emailed_${details.reference}`;
-    const alreadyEmailed = sessionStorage.getItem(emailKey) === "true";
+    const alreadyEmailed = sessionGet(emailKey) === "true";
     notifiedRef.current = true;
 
     // Save to sessionStorage for /gracias fallback
-    sessionStorage.setItem(
+    sessionSet(
       "lastDonation",
       JSON.stringify({
         name: details.donorName || "Donante",
@@ -96,7 +97,7 @@ const PaymentReturn = () => {
     );
 
     // Clear localStorage donor payload after successful payment
-    localStorage.removeItem("rdn_donation_donor_payload");
+    localRemove("rdn_donation_donor_payload");
 
     const sendNotifications = async () => {
       if (!alreadyEmailed) {
@@ -116,7 +117,7 @@ const PaymentReturn = () => {
         try {
           const { error } = await supabase.functions.invoke("notify-donation", { body: payload });
           if (error) console.error("[PaymentReturn] notify-donation FAILED:", error);
-          else sessionStorage.setItem(emailKey, "true");
+          else sessionSet(emailKey, "true");
         } catch (e) {
           console.error("[PaymentReturn] notify-donation error:", e);
         }

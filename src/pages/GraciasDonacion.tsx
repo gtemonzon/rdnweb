@@ -1,4 +1,5 @@
 import { useSearchParams, Link } from "react-router-dom";
+import { sessionGet } from "@/lib/safeStorage";
 import { Heart, Home, Facebook, Instagram, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,7 +11,7 @@ const GraciasDonacion = () => {
   // Read from query params first, fallback to sessionStorage
   let fallback: Record<string, string> = {};
   try {
-    const stored = sessionStorage.getItem("lastDonation");
+    const stored = sessionGet("lastDonation");
     if (stored) fallback = JSON.parse(stored);
   } catch (_) {}
 

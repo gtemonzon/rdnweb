@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { localSet } from "@/lib/safeStorage";
 import {
   Heart, CreditCard, Building, Repeat, Gift, Check, Loader2, Info,
   Lock, DollarSign, Upload, ExternalLink, ChevronRight, ChevronLeft, Shield,
@@ -251,7 +252,7 @@ const Donar = () => {
         const referenceNumber = `DON-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
         // Persist donor payload to localStorage before redirect
-        localStorage.setItem("rdn_donation_donor_payload", JSON.stringify({
+        localSet("rdn_donation_donor_payload", JSON.stringify({
           donor_name: `${formData.firstName} ${formData.lastName}`.trim(),
           donor_email: formData.email,
           donor_phone: phoneE164 || "",
