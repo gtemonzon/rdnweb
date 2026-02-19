@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { FileText, Download, Calendar, ExternalLink, ChevronDown, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Layout from "@/components/layout/Layout";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/lib/publicClient";
 import {
   Accordion,
   AccordionContent,
@@ -65,7 +65,7 @@ const Transparencia = () => {
 
   const fetchData = async () => {
     // Fetch registros y certificaciones from site_content
-    const { data: registrosData } = await supabase
+    const { data: registrosData } = await publicSupabase
       .from("site_content")
       .select("content")
       .eq("section_key", "registros_certificaciones")
@@ -76,14 +76,14 @@ const Transparencia = () => {
     }
 
     // Fetch active numerals
-    const { data: numeralsData } = await supabase
+    const { data: numeralsData } = await publicSupabase
       .from("transparency_numerals")
       .select("*")
       .eq("is_active", true)
       .order("display_order");
 
     // Fetch active documents
-    const { data: docsData } = await supabase
+    const { data: docsData } = await publicSupabase
       .from("transparency_documents")
       .select("*")
       .eq("is_active", true)

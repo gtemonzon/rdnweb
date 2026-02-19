@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/layout/Layout";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/lib/publicClient";
 
 interface Post {
   id: string;
@@ -42,12 +42,12 @@ const Blog = () => {
   useEffect(() => {
     const fetchAll = async () => {
       const [blogRes, statRes] = await Promise.all([
-        supabase
+        publicSupabase
           .from("blog_posts")
           .select("id, title, slug, excerpt, image_url, category, published_at, created_at")
           .eq("published", true)
           .order("published_at", { ascending: false }),
-        supabase
+        publicSupabase
           .from("stat_posts")
           .select("id, title, slug, summary, cover_image_url, source_name, period_start, period_end, published_at, created_at")
           .eq("published", true)
