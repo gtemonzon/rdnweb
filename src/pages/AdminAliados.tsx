@@ -140,7 +140,7 @@ const AdminAliados = () => {
 
   return (
     <AdminLayout>
-      <div>
+      <div className="max-w-4xl">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
           <div>
             <h1 className="font-heading text-2xl md:text-3xl font-bold text-foreground">
