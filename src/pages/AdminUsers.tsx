@@ -498,7 +498,6 @@ const AdminUsers = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Usuario</TableHead>
-                    <TableHead>ID</TableHead>
                     <TableHead>Rol</TableHead>
                     <TableHead>Módulos</TableHead>
                     <TableHead>Asignar Rol</TableHead>
@@ -510,9 +509,6 @@ const AdminUsers = () => {
                     <TableRow key={u.user_id}>
                       <TableCell className="font-medium">
                         {u.full_name || "Sin nombre"}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {u.user_id.substring(0, 8)}...
                       </TableCell>
                       <TableCell>
                         {u.role ? (
