@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Loader2, ExternalLink, GripVertical, ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Partner {
   id: string;
@@ -196,13 +197,13 @@ const AdminAliados = () => {
         ) : (
           <div className="grid gap-4">
             {partners?.map((partner) => (
-              <Card key={partner.id} className={!partner.is_active ? "opacity-60" : ""}>
-                <CardContent className="flex items-center gap-4 py-4">
-                  <div className="cursor-move text-muted-foreground">
+              <Card key={partner.id} className={cn("overflow-hidden", !partner.is_active && "opacity-60")}>
+                <CardContent className="flex items-center gap-4 py-4 px-4">
+                  <div className="cursor-move text-muted-foreground shrink-0">
                     <GripVertical className="w-5 h-5" />
                   </div>
                   
-                  <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center overflow-hidden shrink-0">
                     {partner.logo_url && partner.logo_url !== "/placeholder.svg" ? (
                       <img 
                         src={partner.logo_url} 
@@ -210,25 +211,25 @@ const AdminAliados = () => {
                         className="w-full h-full object-contain"
                       />
                     ) : (
-                      <span className="text-2xl font-bold text-muted-foreground">
+                      <span className="text-lg font-bold text-muted-foreground">
                         {partner.name.charAt(0)}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground truncate">{partner.name}</h3>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h3 className="font-semibold text-foreground truncate text-sm">{partner.name}</h3>
                     {partner.description && (
-                      <p className="text-sm text-muted-foreground truncate">{partner.description}</p>
+                      <p className="text-xs text-muted-foreground truncate">{partner.description}</p>
                     )}
                     {partner.website_url && (
                       <a 
                         href={partner.website_url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-xs text-primary flex items-center gap-1 mt-1 hover:underline"
+                        className="text-xs text-primary flex items-center gap-1 mt-0.5 hover:underline truncate"
                       >
-                        <ExternalLink className="w-3 h-3" /> {partner.website_url}
+                        <ExternalLink className="w-3 h-3 shrink-0" /> <span className="truncate">{partner.website_url}</span>
                       </a>
                     )}
                   </div>
